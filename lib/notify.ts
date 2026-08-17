@@ -1,6 +1,6 @@
 import { normalizePhone } from "@/lib/sms";
 
-const DEFAULT_WHATSAPP_TEMPLATE = "HXb5b62575e6e4ff6129ad7c8efe1f983e";
+const DEFAULT_WHATSAPP_TEMPLATE = "HX1aba3b44ba175f8983ab7b44db19dbaf";
 
 export async function sendWhatsApp(to: string, dateSlot: string, timeSlot: string) {
   const sid = process.env.TWILIO_ACCOUNT_SID;
