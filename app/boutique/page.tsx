@@ -15,7 +15,7 @@ export default function BoutiquePage() {
     <main>
       <PageHero
         title="Boutique capillaire"
-        subtitle="Les produits qu'on utilise en chaise, à emporter. Nord Foire, Dakar."
+        subtitle="Les produits qu'on utilise en chaise, à emporter. Paiement Wave, Orange Money ou Free. Retrait à Nord Foire."
         image={pageImages.boutique}
       />
       <section className="mx-auto max-w-[1100px] px-6 pb-12">
@@ -54,10 +54,10 @@ export default function BoutiquePage() {
                 <div className="mt-6 flex items-center justify-between">
                   <span className="font-bebas text-2xl text-white">{p.price}</span>
                   <Link
-                    href="/contact"
+                    href={`/boutique/payer/${p.id}`}
                     className="btn-gold rounded-lg px-4 py-2 text-sm transition-all"
                   >
-                    Commander
+                    Payer
                   </Link>
                 </div>
               </div>

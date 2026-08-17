@@ -13,7 +13,7 @@ export default function RendezVousPage() {
     <main>
       <PageHero
         title="Prendre rendez-vous"
-        subtitle="Choisissez le jour, l'heure et le lieu : au salon de Nord Foire, ou à domicile."
+        subtitle="Choisissez le jour, l'heure et le lieu. Vous pouvez payer maintenant par Wave, Orange Money ou Free."
         image={pageImages.contact}
       />
       <section className="mx-auto grid max-w-[1100px] grid-cols-1 gap-8 px-6 pb-28 lg:grid-cols-[0.85fr_1.15fr]">

@@ -81,6 +81,7 @@ export default function BookingForm() {
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState<Confirmation | null>(null);
+  const [payNow, setPayNow] = useState(true);
 
   const cells = useMemo(() => {
     const year = cursor.getFullYear();
@@ -151,11 +152,16 @@ export default function BookingForm() {
           time,
           place,
           address,
+          payNow,
         }),
       });
-      const json = (await res.json().catch(() => null)) as { error?: string; invoiceId?: string; amount?: number } | null;
+      const json = (await res.json().catch(() => null)) as { error?: string; invoiceId?: string; amount?: number; payUrl?: string } | null;
       if (!res.ok) {
         showMessage(json?.error || "Impossible d'envoyer la demande. Réessayez.");
+        return;
+      }
+      if (payNow && json?.payUrl) {
+        window.location.href = json.payUrl;
         return;
       }
       setDone({ ...confirmation, invoiceId: json?.invoiceId, amount: json?.amount });
@@ -174,6 +180,7 @@ export default function BookingForm() {
     setSelected(null);
     setTime("");
     setPlace("salon");
+    setPayNow(true);
     setError("");
   }
 
@@ -186,7 +193,7 @@ export default function BookingForm() {
             <p className="font-bebas text-4xl text-white">Rendez-vous demandé</p>
             <p className="mt-2 text-sm text-gray-400">
               Merci {done.name}. Un SMS, un WhatsApp et un email de confirmation partent au {done.phone}
-              {done.email ? ` et ${done.email}` : ""}. Nous vous rappelons pour confirmer.
+              {done.email ? ` et ${done.email}` : ""}. {done.invoiceId ? "Tu peux payer maintenant ou au salon." : "Nous vous rappelons pour confirmer."}
             </p>
           </div>
           <ul className="w-full space-y-3 border-y border-white/10 py-5 text-sm text-gray-200">
@@ -215,7 +222,7 @@ export default function BookingForm() {
           </ul>
           {done.invoiceId && (done.amount || 0) > 0 ? (
             <a href={`/payer/${done.invoiceId}`} className="btn-gold flex h-12 w-full items-center justify-center rounded-lg text-sm font-medium">
-              Payer par Wave / Orange Money / Free
+              Payer maintenant · Wave / Orange / Free
             </a>
           ) : null}
           <button type="button" onClick={reset} className="h-12 w-full cursor-pointer rounded-lg bg-gray-900 text-sm text-white ring-1 ring-white/10 hover:bg-gray-800">
@@ -403,12 +410,34 @@ export default function BookingForm() {
             </p>
           ) : null}
 
+          <div className="rounded-xl bg-gray-900 p-4 ring-1 ring-white/10">
+            <p className="text-sm font-medium text-white">Paiement</p>
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setPayNow(true)}
+                className={`cursor-pointer rounded-lg px-4 py-3 text-left text-sm ${payNow ? "btn-gold" : "text-gray-300 ring-1 ring-white/10 hover:bg-gray-800"}`}
+              >
+                Payer maintenant
+                <span className={`mt-1 block text-xs ${payNow ? "text-black/70" : "text-gray-500"}`}>Wave · Orange · Free</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPayNow(false)}
+                className={`cursor-pointer rounded-lg px-4 py-3 text-left text-sm ${!payNow ? "btn-gold" : "text-gray-300 ring-1 ring-white/10 hover:bg-gray-800"}`}
+              >
+                Payer au salon
+                <span className={`mt-1 block text-xs ${!payNow ? "text-black/70" : "text-gray-500"}`}>Espèces ou Mobile Money</span>
+              </button>
+            </div>
+          </div>
+
           <button
             type="submit"
             disabled={sending}
             className="btn-gold h-12 cursor-pointer rounded-lg text-sm font-medium active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
           >
-            {sending ? "Envoi du SMS…" : "Confirmer le rendez-vous"}
+            {sending ? (payNow ? "Ouverture du paiement…" : "Envoi du SMS…") : payNow ? "Réserver et payer" : "Confirmer le rendez-vous"}
           </button>
           <p className="text-xs text-gray-500">
             Salon : lun–sam 10h–21h, dim 12h–20h. À domicile : déplacement 2 000 F, Dakar uniquement.

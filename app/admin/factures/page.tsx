@@ -15,6 +15,13 @@ const FILTERS = [
   { id: "annulee", label: "Annulées" },
 ] as const;
 
+const KIND: Record<NonNullable<Invoice["kind"]>, string> = {
+  rdv: "RDV",
+  boutique: "Boutique",
+  abonnement: "Abonnement",
+  caisse: "Caisse",
+};
+
 const STATUS: Record<Invoice["status"], string> = {
   brouillon: "Brouillon",
   envoyee: "À encaisser",
@@ -154,6 +161,7 @@ export default function FacturesPage() {
                 <div>
                   <p className="text-white">
                     {item.number} <span className="text-gray-500">· {item.clientName}</span>
+                    <span className="ml-2 text-xs text-[#c4a574]">{KIND[item.kind || "caisse"]}</span>
                   </p>
                   <p className="mt-1 text-sm text-gray-500">{item.items.map((line) => line.name).join(", ")}</p>
                 </div>

@@ -53,22 +53,22 @@ export default function AbonnementsPage() {
                 ))}
               </ul>
               <Link
-                href="/contact"
+                href={`/abonnements/payer/${plan.id}`}
                 className={`mt-8 inline-flex h-11 items-center justify-center rounded-lg text-sm transition-all ${
                   plan.highlight
                     ? "btn-gold"
                     : "bg-gray-400/15 text-white hover:bg-gray-200/80 hover:text-gray-950"
                 }`}
               >
-                Souscrire
+                Payer l'abonnement
               </Link>
             </article>
           </Reveal>
         ))}
       </section>
       <p className="mx-auto max-w-[60ch] px-6 pb-24 text-center text-sm text-gray-500">
-        Les abonnements se prennent au salon ou par message. Les visites non utilisées ne se reportent pas au mois
-        suivant.
+        Paie par Wave, Orange Money ou Free Money. L'abonnement démarre dès le paiement, uniquement à Nord Foire. Les
+        visites non utilisées ne se reportent pas au mois suivant.
       </p>
     </main>
   );

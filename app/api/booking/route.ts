@@ -3,6 +3,7 @@ import { services } from "@/lib/data";
 import { isSnMobile, sendSms, smsConfigured } from "@/lib/sms";
 import { sendBookingEmail, sendWhatsApp } from "@/lib/notify";
 import { bookingsConfigured, createBooking } from "@/lib/bookings";
+import { startCheckout } from "@/lib/paydunya";
 
 type BookingBody = {
   name?: unknown;
@@ -14,6 +15,7 @@ type BookingBody = {
   time?: unknown;
   place?: unknown;
   address?: unknown;
+  payNow?: unknown;
 };
 
 function text(value: unknown) {
@@ -37,6 +39,7 @@ export async function POST(request: Request) {
   const time = text(payload.time);
   const place = text(payload.place) === "domicile" ? "domicile" : "salon";
   const address = text(payload.address);
+  const payNow = payload.payNow === true;
   const service = services.find((item) => item.id === serviceId);
   const owner = process.env.BOOKING_SMS_TO || "";
 
@@ -69,6 +72,7 @@ export async function POST(request: Request) {
 
   let invoiceId = "";
   let amount = 0;
+  let payUrl = "";
   if (bookingsConfigured()) {
     try {
       const booking = await createBooking({
@@ -85,6 +89,14 @@ export async function POST(request: Request) {
       });
       invoiceId = booking.invoiceId || "";
       amount = booking.amount;
+      if (payNow && invoiceId && amount > 0) {
+        try {
+          const checkout = await startCheckout(invoiceId);
+          payUrl = checkout.url;
+        } catch (error) {
+          console.error("PayDunya booking checkout", error);
+        }
+      }
     } catch (error) {
       console.error("Booking save failed", error);
       return NextResponse.json({ error: "Impossible d'enregistrer le rendez-vous." }, { status: 500 });
@@ -113,5 +125,5 @@ export async function POST(request: Request) {
     ]);
   }
 
-  return NextResponse.json({ ok: true, invoiceId, amount });
+  return NextResponse.json({ ok: true, invoiceId, amount, payUrl });
 }

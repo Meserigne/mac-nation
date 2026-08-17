@@ -4,6 +4,7 @@ import { bookingAmount, bookingLines, invoiceTotal, type ExpenseCategory, type I
 export type BookingStatus = "nouveau" | "confirme" | "termine" | "annule";
 export type PaymentStatus = "unpaid" | "pending" | "paid" | "refunded";
 export type InvoiceStatus = "brouillon" | "envoyee" | "payee" | "annulee";
+export type InvoiceKind = "rdv" | "boutique" | "abonnement" | "caisse";
 
 export type Booking = {
   id: string;
@@ -40,6 +41,7 @@ export type Invoice = {
   paydunyaToken?: string;
   paydunyaUrl?: string;
   note?: string;
+  kind?: InvoiceKind;
 };
 
 export type Payment = {
@@ -131,6 +133,7 @@ function asInvoice(raw: Partial<Invoice>): Invoice {
     paydunyaToken: raw.paydunyaToken,
     paydunyaUrl: raw.paydunyaUrl,
     note: raw.note,
+    kind: raw.kind || (raw.bookingId ? "rdv" : "caisse"),
   };
 }
 
@@ -263,6 +266,7 @@ function makeInvoice(store: SalonStore, input: {
   items: InvoiceLine[];
   note?: string;
   status?: InvoiceStatus;
+  kind?: InvoiceKind;
 }): Invoice {
   const items = input.items.filter((line) => line.name.trim() && line.qty > 0);
   const amount = invoiceTotal(items);
@@ -278,6 +282,7 @@ function makeInvoice(store: SalonStore, input: {
     amount,
     status: input.status || (amount > 0 ? "envoyee" : "brouillon"),
     note: input.note,
+    kind: input.kind || (input.bookingId ? "rdv" : "caisse"),
   };
 }
 
@@ -299,6 +304,7 @@ export async function createBooking(input: Omit<Booking, "id" | "createdAt" | "s
       clientEmail: booking.email,
       items: bookingLines(booking.serviceName, booking.serviceId, booking.place),
       note: `${booking.dateLabel} · ${booking.time} · ${booking.place === "domicile" ? booking.address : "Salon Nord Foire"}`,
+      kind: "rdv",
     });
     booking.invoiceId = invoice.id;
     booking.amount = invoice.amount;
@@ -344,6 +350,7 @@ export async function invoiceForBooking(bookingId: string) {
       clientEmail: booking.email,
       items: bookingLines(booking.serviceName, booking.serviceId, booking.place),
       note: `${booking.dateLabel} · ${booking.time}`,
+      kind: "rdv",
     });
     booking.invoiceId = invoice.id;
     booking.amount = invoice.amount;
@@ -358,6 +365,7 @@ export async function createWalkInInvoice(input: {
   clientEmail?: string;
   items: InvoiceLine[];
   note?: string;
+  kind?: InvoiceKind;
 }) {
   return mutateStore((store) => {
     const invoice = makeInvoice(store, {
@@ -366,6 +374,7 @@ export async function createWalkInInvoice(input: {
       clientEmail: input.clientEmail || "",
       items: input.items,
       note: input.note,
+      kind: input.kind,
     });
     store.invoices.push(invoice);
     return invoice;
