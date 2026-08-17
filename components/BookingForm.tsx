@@ -179,7 +179,7 @@ export default function BookingForm() {
           <div>
             <p className="font-bebas text-4xl text-white">Rendez-vous demandé</p>
             <p className="mt-2 text-sm text-gray-400">
-              Merci {done.name}. Nous vous rappelons au {done.phone} pour confirmer.
+              Merci {done.name}. Un SMS a été envoyé au {done.phone}. Nous vous rappelons pour confirmer.
             </p>
           </div>
           <ul className="w-full space-y-3 border-y border-white/10 py-5 text-sm text-gray-200">

@@ -8,6 +8,11 @@ export function normalizePhone(input: string) {
   return `+${digits}`;
 }
 
+export function isSnMobile(input: string) {
+  const phone = normalizePhone(input);
+  return /^\+2217\d{8}$/.test(phone);
+}
+
 export function smsConfigured() {
   return Boolean(
     process.env.TWILIO_ACCOUNT_SID &&
@@ -17,12 +22,11 @@ export function smsConfigured() {
   );
 }
 
-export async function sendSms(body: string) {
+export async function sendSms(to: string, body: string) {
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
   const from = process.env.TWILIO_FROM;
-  const to = process.env.BOOKING_SMS_TO;
-  if (!sid || !token || !from || !to) {
+  if (!sid || !token || !from) {
     throw new Error("SMS_NOT_CONFIGURED");
   }
 
