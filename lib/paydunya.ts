@@ -1,6 +1,8 @@
 import { createHash, timingSafeEqual } from "crypto";
 import { siteUrl } from "@/lib/site";
-import { attachPaydunya, getInvoice, type Invoice } from "@/lib/store";
+import { isSnMobile, normalizePhone } from "@/lib/sms";
+import { attachPaydunya, getInvoice, markInvoicePaid, type Invoice } from "@/lib/store";
+import type { PaymentMethod } from "@/lib/money";
 
 type PaydunyaCreateResponse = {
   response_code?: string;
@@ -163,6 +165,150 @@ export type PaydunyaIpn = {
   invoice?: { token?: string; total_amount?: number | string };
   custom_data?: Record<string, string>;
 };
+
+export type SoftPayMethod = "wave" | "orange" | "free";
+
+type SoftPayApiResponse = {
+  success?: boolean;
+  message?: string;
+  url?: string;
+  other_url?: { om_url?: string; maxit_url?: string };
+  errors?: { message?: string; description?: string };
+};
+
+export type SoftPayResult =
+  | { method: "wave"; message: string; url: string }
+  | { method: "orange"; message: string; qr: string; omUrl: string; maxitUrl: string }
+  | { method: "free"; message: string };
+
+function localSnPhone(phone: string) {
+  return normalizePhone(phone).replace(/\D/g, "").slice(-9);
+}
+
+function payerEmail(email: string, phone: string) {
+  const trimmed = email.trim();
+  if (trimmed.includes("@")) return trimmed;
+  return `${localSnPhone(phone)}@client.mac-nation.sn`;
+}
+
+function softPayError(json: SoftPayApiResponse | null) {
+  return json?.errors?.description || json?.errors?.message || json?.message || "Paiement Mobile Money indisponible.";
+}
+
+function orangeQrFromUrl(url: string) {
+  if (!url) return "";
+  if (url.startsWith("data:image/")) return url;
+  try {
+    const parsed = new URL(url);
+    const qr = parsed.searchParams.get("data[qrcode]");
+    if (qr) return `data:image/png;base64,${qr.replace(/ /g, "+")}`;
+  } catch {
+    return "";
+  }
+  return "";
+}
+
+function isPaydunyaHost(url: string) {
+  try {
+    return new URL(url).hostname.toLowerCase().includes("paydunya.com");
+  } catch {
+    return true;
+  }
+}
+
+async function postSoftPay(path: string, body: Record<string, string>) {
+  const res = await fetch(`${apiBase()}${path}`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  const json = (await res.json().catch(() => null)) as SoftPayApiResponse | null;
+  if (!res.ok || json?.success === false) {
+    console.error("PayDunya SoftPay failed", path, res.status, json);
+    throw new Error(softPayError(json));
+  }
+  return json || {};
+}
+
+export async function startSoftPay(opts: {
+  invoiceId: string;
+  method: SoftPayMethod;
+  phone?: string;
+  name?: string;
+  email?: string;
+}): Promise<SoftPayResult> {
+  const invoice = await getInvoice(opts.invoiceId);
+  if (!invoice) throw new Error("INVOICE_MISSING");
+  const checkout = await startCheckout(opts.invoiceId);
+  const phone = localSnPhone(opts.phone || invoice.clientPhone);
+  if (!isSnMobile(phone)) throw new Error("PHONE_INVALID");
+  const name = (opts.name || invoice.clientName || "Client MAC NATION").trim();
+  const email = payerEmail(opts.email || invoice.clientEmail, phone);
+
+  if (opts.method === "wave") {
+    const json = await postSoftPay("/softpay/wave-senegal", {
+      wave_senegal_fullName: name,
+      wave_senegal_email: email,
+      wave_senegal_phone: phone,
+      wave_senegal_payment_token: checkout.token,
+    });
+    if (!json.url || isPaydunyaHost(json.url)) {
+      throw new Error(json.message || "Wave n'a pas renvoyé de lien de paiement.");
+    }
+    return { method: "wave", url: json.url, message: json.message || "Ouvre Wave pour valider." };
+  }
+
+  if (opts.method === "orange") {
+    const json = await postSoftPay("/softpay/new-orange-money-senegal", {
+      customer_name: name,
+      customer_email: email,
+      phone_number: phone,
+      invoice_token: checkout.token,
+    });
+    const qr = orangeQrFromUrl(json.url || "");
+    const omUrl = json.other_url?.om_url || "";
+    const maxitUrl = json.other_url?.maxit_url || "";
+    if (!qr && !omUrl && !maxitUrl) {
+      throw new Error(json.message || "Orange Money n'a pas renvoyé de QR code.");
+    }
+    return {
+      method: "orange",
+      qr,
+      omUrl,
+      maxitUrl,
+      message: "Scanne le QR avec Orange Money, ou ouvre l’application.",
+    };
+  }
+
+  const json = await postSoftPay("/softpay/free-money-senegal", {
+    customer_name: name,
+    customer_email: email,
+    phone_number: phone,
+    payment_token: checkout.token,
+  });
+  return {
+    method: "free",
+    message: json.message || "Compose #150# sur ton téléphone pour valider le paiement Free Money.",
+  };
+}
+
+export async function refreshInvoicePayment(invoiceId: string, method?: SoftPayMethod) {
+  const invoice = await getInvoice(invoiceId);
+  if (!invoice) throw new Error("INVOICE_MISSING");
+  if (invoice.status === "payee") return invoice;
+  const token = invoice.paydunyaToken;
+  if (!token) return invoice;
+  const confirmed = await confirmPaydunya(token);
+  if ((confirmed.status || "").toLowerCase() !== "completed") return invoice;
+  const paidMethod: PaymentMethod = method || "paydunya";
+  const result = await markInvoicePaid({
+    invoiceId: invoice.id,
+    paydunyaToken: token,
+    method: paidMethod,
+  });
+  return result?.invoice || invoice;
+}
 
 export function parseIpnPayload(raw: unknown): PaydunyaIpn {
   if (!raw) return {};

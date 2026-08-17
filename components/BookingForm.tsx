@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useRef, useState } from "react";
 import { CaretLeft, CaretRight, CheckCircle } from "@phosphor-icons/react";
 import { services } from "@/lib/data";
 import { formatFcfa } from "@/lib/money";
+import SoftPay from "@/components/SoftPay";
 
 const WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"] as const;
 const MONTHS = [
@@ -155,13 +156,9 @@ export default function BookingForm() {
           payNow,
         }),
       });
-      const json = (await res.json().catch(() => null)) as { error?: string; invoiceId?: string; amount?: number; payUrl?: string } | null;
+      const json = (await res.json().catch(() => null)) as { error?: string; invoiceId?: string; amount?: number } | null;
       if (!res.ok) {
         showMessage(json?.error || "Impossible d'envoyer la demande. Réessayez.");
-        return;
-      }
-      if (payNow && json?.payUrl) {
-        window.location.href = json.payUrl;
         return;
       }
       setDone({ ...confirmation, invoiceId: json?.invoiceId, amount: json?.amount });
@@ -221,9 +218,15 @@ export default function BookingForm() {
             ) : null}
           </ul>
           {done.invoiceId && (done.amount || 0) > 0 ? (
-            <a href={`/payer/${done.invoiceId}`} className="btn-gold flex h-12 w-full items-center justify-center rounded-lg text-sm font-medium">
-              Payer maintenant · Wave / Orange / Free
-            </a>
+            payNow ? (
+              <div className="w-full">
+                <SoftPay invoiceId={done.invoiceId} amount={done.amount || 0} name={done.name} phone={done.phone} email={done.email} />
+              </div>
+            ) : (
+              <a href={`/payer/${done.invoiceId}`} className="btn-gold flex h-12 w-full items-center justify-center rounded-lg text-sm font-medium">
+                Payer maintenant · Wave / Orange / Free
+              </a>
+            )
           ) : null}
           <button type="button" onClick={reset} className="h-12 w-full cursor-pointer rounded-lg bg-gray-900 text-sm text-white ring-1 ring-white/10 hover:bg-gray-800">
             Prendre un autre rendez-vous
@@ -437,7 +440,7 @@ export default function BookingForm() {
             disabled={sending}
             className="btn-gold h-12 cursor-pointer rounded-lg text-sm font-medium active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
           >
-            {sending ? (payNow ? "Ouverture du paiement…" : "Envoi du SMS…") : payNow ? "Réserver et payer" : "Confirmer le rendez-vous"}
+            {sending ? (payNow ? "Préparation du paiement…" : "Envoi du SMS…") : payNow ? "Réserver et payer" : "Confirmer le rendez-vous"}
           </button>
           <p className="text-xs text-gray-500">
             Salon : lun–sam 10h–21h, dim 12h–20h. À domicile : déplacement 2 000 F, Dakar uniquement.

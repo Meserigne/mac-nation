@@ -1,13 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import type { Invoice } from "@/lib/store";
 import { formatFcfa } from "@/lib/money";
+import SoftPay from "@/components/SoftPay";
 
 export default function PayClient({ invoice }: { invoice: Invoice }) {
-  const [error, setError] = useState("");
-  const [sending, setSending] = useState(false);
-
   if (invoice.status === "payee") {
     return (
       <div className="rounded-2xl bg-gray-950 p-8 text-center stroke-gradient [--stroke-opacity:0.2]">
@@ -18,28 +15,6 @@ export default function PayClient({ invoice }: { invoice: Invoice }) {
         </p>
       </div>
     );
-  }
-
-  async function pay() {
-    setSending(true);
-    setError("");
-    try {
-      const res = await fetch("/api/paydunya/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoiceId: invoice.id }),
-      });
-      const json = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok || !json.url) {
-        setError(json.error || "Paiement indisponible.");
-        return;
-      }
-      window.location.href = json.url;
-    } catch {
-      setError("Connexion interrompue.");
-    } finally {
-      setSending(false);
-    }
   }
 
   return (
@@ -64,11 +39,16 @@ export default function PayClient({ invoice }: { invoice: Invoice }) {
           <span className="font-bebas text-3xl">{formatFcfa(invoice.amount)}</span>
         </li>
       </ul>
-      {error ? <p className="mt-4 text-sm text-red-400">{error}</p> : null}
-      <button type="button" disabled={sending || invoice.amount <= 0} onClick={() => void pay()} className="btn-gold mt-6 h-12 w-full cursor-pointer rounded-lg text-sm font-medium disabled:opacity-60">
-        {sending ? "Ouverture…" : "Payer par Wave / Orange Money / Free"}
-      </button>
-      <p className="mt-3 text-center text-xs text-gray-500">Paiement sécurisé PayDunya. Espèces aussi acceptées au salon.</p>
+      <div className="mt-6">
+        <SoftPay
+          invoiceId={invoice.id}
+          amount={invoice.amount}
+          name={invoice.clientName}
+          phone={invoice.clientPhone}
+          email={invoice.clientEmail}
+          hideAmount
+        />
+      </div>
     </div>
   );
 }

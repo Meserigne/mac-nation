@@ -45,17 +45,7 @@ export default function InvoiceActions({ invoice }: { invoice: Invoice }) {
   }
 
   async function mobile() {
-    setBusy("mm");
-    setError("");
-    const res = await fetch(`/api/admin/invoices/${invoice.id}/paydunya`, { method: "POST" });
-    const json = (await res.json()) as { url?: string; error?: string };
-    setBusy("");
-    if (!res.ok || !json.url) {
-      setError(json.error || "PayDunya indisponible.");
-      return;
-    }
-    window.open(json.url, "_blank", "noopener,noreferrer");
-    router.refresh();
+    window.open(`/payer/${invoice.id}`, "_blank", "noopener,noreferrer");
   }
 
   if (invoice.status === "payee") return null;
@@ -78,7 +68,7 @@ export default function InvoiceActions({ invoice }: { invoice: Invoice }) {
         Wave
       </button>
       <button type="button" disabled={Boolean(busy)} onClick={() => void mobile()} className="h-10 cursor-pointer rounded-lg bg-gray-900 px-3 text-sm text-white ring-1 ring-white/10 disabled:opacity-50">
-        PayDunya
+        Wave / Orange / Free
       </button>
       {error ? <p className="w-full text-xs text-red-400">{error}</p> : null}
     </div>

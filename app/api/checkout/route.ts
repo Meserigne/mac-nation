@@ -76,13 +76,20 @@ export async function POST(request: Request) {
 
   try {
     let invoice;
+    let persisted = true;
     try {
       invoice = await createWalkInInvoice(draft);
     } catch (error) {
       console.error("Invoice persist failed, continuing to PayDunya", error);
+      persisted = false;
       invoice = buildWalkInInvoice(draft);
     }
-    const checkout = await createPaydunyaCheckout(invoice);
+    try {
+      await createPaydunyaCheckout(invoice);
+    } catch (error) {
+      console.error("PayDunya create at checkout", error);
+      if (!persisted) throw error;
+    }
     const owner = process.env.BOOKING_SMS_TO || "";
     const lines = [name, phone, email, `${lineName}${qty > 1 && invoiceKind === "boutique" ? ` × ${qty}` : ""}`, `${invoice.amount} F`, note].filter(Boolean);
     if (smsConfigured() && owner) {
@@ -96,7 +103,7 @@ export async function POST(request: Request) {
         }),
       ]);
     }
-    return NextResponse.json({ ok: true, url: checkout.url, invoiceId: invoice.id, amount: invoice.amount });
+    return NextResponse.json({ ok: true, invoiceId: invoice.id, amount: invoice.amount });
   } catch (error) {
     const message = error instanceof Error ? error.message : "PAYDUNYA";
     if (message === "PAYDUNYA_MISSING") {
