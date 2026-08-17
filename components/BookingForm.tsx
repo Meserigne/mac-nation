@@ -144,6 +144,7 @@ export default function BookingForm() {
           email,
           serviceId: service.id,
           dateLabel: confirmation.dateLabel,
+          dateIso: `${selected.getFullYear()}-${String(selected.getMonth() + 1).padStart(2, "0")}-${String(selected.getDate()).padStart(2, "0")}`,
           time,
           place,
           address,

@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, Manrope } from "next/font/google";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import Preloader from "@/components/Preloader";
+import SiteChrome from "@/components/SiteChrome";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -42,10 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr" className={`${manrope.variable} ${bebas.variable}`}>
       <body className="font-sans bg-background p-0 antialiased">
-        <Preloader />
-        <Header />
-        {children}
-        <Footer />
+        <SiteChrome>{children}</SiteChrome>
       </body>
     </html>
   );

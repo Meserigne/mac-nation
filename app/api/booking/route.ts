@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { services } from "@/lib/data";
 import { isSnMobile, sendSms, smsConfigured } from "@/lib/sms";
 import { sendBookingEmail, sendWhatsApp } from "@/lib/notify";
+import { bookingsConfigured, createBooking } from "@/lib/bookings";
 
 type BookingBody = {
   name?: unknown;
@@ -9,6 +10,7 @@ type BookingBody = {
   email?: unknown;
   serviceId?: unknown;
   dateLabel?: unknown;
+  dateIso?: unknown;
   time?: unknown;
   place?: unknown;
   address?: unknown;
@@ -31,6 +33,7 @@ export async function POST(request: Request) {
   const email = text(payload.email);
   const serviceId = text(payload.serviceId);
   const dateLabel = text(payload.dateLabel);
+  const dateIso = text(payload.dateIso);
   const time = text(payload.time);
   const place = text(payload.place) === "domicile" ? "domicile" : "salon";
   const address = text(payload.address);
@@ -64,25 +67,47 @@ export async function POST(request: Request) {
   const ownerMessage = ["MAC NATION : nouveau RDV", ...ownerLines].join("\n");
   const clientMessage = ["MAC NATION : votre RDV", ...clientLines].join("\n");
 
-  try {
-    await Promise.all([sendSms(owner, ownerMessage), sendSms(phone, clientMessage)]);
-  } catch {
-    return NextResponse.json(
-      { error: "Le SMS n'a pas pu partir. Vérifiez le numéro et réessayez." },
-      { status: 502 },
-    );
+  if (bookingsConfigured()) {
+    try {
+      await createBooking({
+        name,
+        phone,
+        email,
+        serviceId: service.id,
+        serviceName: service.name,
+        dateIso: dateIso || dateLabel,
+        dateLabel,
+        time,
+        place,
+        address,
+      });
+    } catch (error) {
+      console.error("Booking save failed", error);
+      return NextResponse.json({ error: "Impossible d'enregistrer le rendez-vous." }, { status: 500 });
+    }
   }
 
-  await Promise.allSettled([
-    sendWhatsApp(owner, `${name} · ${phone}`, `${when} · ${service.name}`),
-    sendWhatsApp(phone, dateLabel, `${time} · ${service.name} · ${lieu}`),
-    sendBookingEmail({
-      subject: "MAC NATION : nouveau RDV",
-      title: "MAC NATION : nouveau RDV",
-      lines: ownerLines,
-      clientEmail: email || undefined,
-    }),
-  ]);
+  if (smsConfigured()) {
+    try {
+      await Promise.all([sendSms(owner, ownerMessage), sendSms(phone, clientMessage)]);
+    } catch {
+      return NextResponse.json(
+        { error: "Le SMS n'a pas pu partir. Vérifiez le numéro et réessayez." },
+        { status: 502 },
+      );
+    }
+
+    await Promise.allSettled([
+      sendWhatsApp(owner, dateLabel, `${time} · ${name} · ${service.name}`),
+      sendWhatsApp(phone, dateLabel, `${time} · ${service.name} · ${lieu}`),
+      sendBookingEmail({
+        subject: "MAC NATION : nouveau RDV",
+        title: "MAC NATION : nouveau RDV",
+        lines: ownerLines,
+        clientEmail: email || undefined,
+      }),
+    ]);
+  }
 
   return NextResponse.json({ ok: true });
 }
