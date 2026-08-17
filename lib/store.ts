@@ -75,8 +75,12 @@ export type SalonStore = {
 
 const INDEX = "mn:bookings";
 const SALON_KEY = "mn:salon";
+const STORE_REPO = process.env.BOOKINGS_GITHUB_REPO || "Meserigne/mac-nation";
+const STORE_PATH = "salon-store.json";
+const STORE_BRANCH = "salon-data";
 let client: RedisClientType | null = null;
 let queue: Promise<unknown> = Promise.resolve();
+let repoSha: string | null = null;
 
 export function bookingsConfigured() {
   if (process.env.REDIS_URL) return true;
@@ -162,7 +166,7 @@ async function redis() {
   return client;
 }
 
-async function gistHeaders() {
+async function ghHeaders() {
   return {
     Authorization: `Bearer ${process.env.BOOKINGS_GITHUB_TOKEN}`,
     Accept: "application/vnd.github+json",
@@ -171,17 +175,68 @@ async function gistHeaders() {
   };
 }
 
-async function gistRequest(url: string, init: RequestInit, label: "LOAD" | "SAVE") {
+async function githubRequest(url: string, init: RequestInit, label: "LOAD" | "SAVE") {
   let lastStatus = 0;
   let lastBody = "";
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
     const res = await fetch(url, { ...init, cache: "no-store" });
     lastStatus = res.status;
     if (res.ok) return res;
     lastBody = await res.text().catch(() => "");
     const retryable = lastStatus === 429 || lastStatus === 502 || lastStatus === 503 || lastStatus === 504;
-    if (!retryable || attempt === 4) break;
-    await new Promise((resolve) => setTimeout(resolve, 300 * 2 ** attempt));
+    if (!retryable || attempt === 3) break;
+    await new Promise((resolve) => setTimeout(resolve, 200 * 2 ** attempt));
+  }
+  console.error(`GH_${label}`, lastStatus, lastBody.slice(0, 400));
+  throw new Error(`GH_${label}_${lastStatus}`);
+}
+
+async function loadFromRepo(): Promise<SalonStore> {
+  const res = await githubRequest(
+    `https://api.github.com/repos/${STORE_REPO}/contents/${STORE_PATH}?ref=${STORE_BRANCH}`,
+    { headers: await ghHeaders() },
+    "LOAD",
+  );
+  const json = (await res.json()) as { sha?: string; content?: string };
+  repoSha = json.sha || null;
+  const raw = Buffer.from((json.content || "").replaceAll("\n", ""), "base64").toString("utf8");
+  return normalizeStore(JSON.parse(raw || "{}"));
+}
+
+async function saveToRepo(store: SalonStore) {
+  const res = await githubRequest(
+    `https://api.github.com/repos/${STORE_REPO}/contents/${STORE_PATH}`,
+    {
+      method: "PUT",
+      headers: { ...(await ghHeaders()), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: "Update salon store",
+        content: Buffer.from(JSON.stringify(store)).toString("base64"),
+        branch: STORE_BRANCH,
+        ...(repoSha ? { sha: repoSha } : {}),
+      }),
+    },
+    "SAVE",
+  );
+  const json = (await res.json()) as { content?: { sha?: string } };
+  repoSha = json.content?.sha || repoSha;
+}
+
+async function gistHeaders() {
+  return ghHeaders();
+}
+
+async function gistRequest(url: string, init: RequestInit, label: "LOAD" | "SAVE") {
+  let lastStatus = 0;
+  let lastBody = "";
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const res = await fetch(url, { ...init, cache: "no-store" });
+    lastStatus = res.status;
+    if (res.ok) return res;
+    lastBody = await res.text().catch(() => "");
+    const retryable = lastStatus === 429 || lastStatus === 502 || lastStatus === 503 || lastStatus === 504;
+    if (!retryable || attempt === 2) break;
+    await new Promise((resolve) => setTimeout(resolve, 200 * 2 ** attempt));
   }
   console.error(`GIST_${label}`, lastStatus, lastBody.slice(0, 400));
   throw new Error(`GIST_${label}_${lastStatus}`);
@@ -243,7 +298,12 @@ async function saveToRedis(store: SalonStore) {
 
 export async function loadStore(): Promise<SalonStore> {
   if (process.env.REDIS_URL) return loadFromRedis();
-  return loadFromGist();
+  try {
+    return await loadFromRepo();
+  } catch (error) {
+    console.error("Repo load failed, falling back to gist", error);
+    return loadFromGist();
+  }
 }
 
 async function saveStore(store: SalonStore) {
@@ -251,15 +311,27 @@ async function saveStore(store: SalonStore) {
     await saveToRedis(store);
     return;
   }
-  await saveToGist(store);
+  await saveToRepo(store);
 }
 
 export async function mutateStore<T>(fn: (store: SalonStore) => T | Promise<T>): Promise<T> {
   const run = queue.then(async () => {
-    const store = await loadStore();
-    const result = await fn(store);
-    await saveStore(store);
-    return result;
+    let last: unknown;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      try {
+        const store = await loadStore();
+        const result = await fn(store);
+        await saveStore(store);
+        return result;
+      } catch (error) {
+        last = error;
+        const message = error instanceof Error ? error.message : "";
+        if (!/_(409|429|502|503|504)$/.test(message) || attempt === 3) throw error;
+        repoSha = null;
+        await new Promise((resolve) => setTimeout(resolve, 200 * 2 ** attempt));
+      }
+    }
+    throw last;
   }) as Promise<T>;
   queue = run.then(
     () => undefined,
@@ -298,6 +370,30 @@ function makeInvoice(store: SalonStore, input: {
     status: input.status || (amount > 0 ? "envoyee" : "brouillon"),
     note: input.note,
     kind: input.kind || (input.bookingId ? "rdv" : "caisse"),
+  };
+}
+
+export function buildWalkInInvoice(input: {
+  clientName: string;
+  clientPhone: string;
+  clientEmail?: string;
+  items: InvoiceLine[];
+  note?: string;
+  kind?: InvoiceKind;
+}): Invoice {
+  const items = input.items.filter((line) => line.name.trim() && line.qty > 0);
+  return {
+    id: crypto.randomUUID(),
+    number: `FAC-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+    createdAt: new Date().toISOString(),
+    clientName: input.clientName,
+    clientPhone: input.clientPhone,
+    clientEmail: input.clientEmail || "",
+    items,
+    amount: invoiceTotal(items),
+    status: "envoyee",
+    note: input.note,
+    kind: input.kind || "caisse",
   };
 }
 
@@ -447,11 +543,30 @@ export async function markInvoicePaid(opts: {
   method: PaymentMethod;
   amount?: number;
   note?: string;
+  snapshot?: Partial<Invoice>;
 }) {
   return mutateStore((store) => {
-    const invoice = store.invoices.find(
+    let invoice = store.invoices.find(
       (item) => item.id === opts.invoiceId || (opts.paydunyaToken && item.paydunyaToken === opts.paydunyaToken),
     );
+    if (!invoice && opts.snapshot && (opts.invoiceId || opts.snapshot.id)) {
+      const snap = opts.snapshot;
+      invoice = {
+        id: opts.invoiceId || snap.id || crypto.randomUUID(),
+        number: snap.number || `FAC-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+        createdAt: snap.createdAt || new Date().toISOString(),
+        bookingId: snap.bookingId,
+        clientName: snap.clientName || "",
+        clientPhone: snap.clientPhone || "",
+        clientEmail: snap.clientEmail || "",
+        items: snap.items || [],
+        amount: snap.amount || opts.amount || 0,
+        status: "envoyee",
+        kind: snap.kind,
+        note: snap.note,
+      };
+      store.invoices.push(invoice);
+    }
     if (!invoice) return null;
     if (invoice.status === "payee") {
       return {

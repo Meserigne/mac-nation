@@ -3,8 +3,8 @@ import { plans, products } from "@/lib/data";
 import { parseFcfa } from "@/lib/money";
 import { isSnMobile, sendSms, smsConfigured } from "@/lib/sms";
 import { sendBookingEmail } from "@/lib/notify";
-import { bookingsConfigured, createWalkInInvoice } from "@/lib/store";
-import { startCheckout } from "@/lib/paydunya";
+import { bookingsConfigured, buildWalkInInvoice, createWalkInInvoice } from "@/lib/store";
+import { createPaydunyaCheckout } from "@/lib/paydunya";
 
 export const maxDuration = 30;
 
@@ -65,16 +65,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Montant à confirmer au salon." }, { status: 400 });
   }
 
+  const draft = {
+    clientName: name,
+    clientPhone: phone,
+    clientEmail: email,
+    items: [{ name: lineName, qty: invoiceKind === "abonnement" ? 1 : qty, unitPrice }],
+    note,
+    kind: invoiceKind,
+  };
+
   try {
-    const invoice = await createWalkInInvoice({
-      clientName: name,
-      clientPhone: phone,
-      clientEmail: email,
-      items: [{ name: lineName, qty: invoiceKind === "abonnement" ? 1 : qty, unitPrice }],
-      note,
-      kind: invoiceKind,
-    });
-    const checkout = await startCheckout(invoice.id);
+    let invoice;
+    try {
+      invoice = await createWalkInInvoice(draft);
+    } catch (error) {
+      console.error("Invoice persist failed, continuing to PayDunya", error);
+      invoice = buildWalkInInvoice(draft);
+    }
+    const checkout = await createPaydunyaCheckout(invoice);
     const owner = process.env.BOOKING_SMS_TO || "";
     const lines = [name, phone, email, `${lineName}${qty > 1 && invoiceKind === "boutique" ? ` × ${qty}` : ""}`, `${invoice.amount} F`, note].filter(Boolean);
     if (smsConfigured() && owner) {
@@ -94,7 +102,7 @@ export async function POST(request: Request) {
     if (message === "PAYDUNYA_MISSING") {
       return NextResponse.json({ error: "Paiement Mobile Money indisponible pour le moment." }, { status: 503 });
     }
-    if (message.startsWith("GIST_")) {
+    if (message.startsWith("GIST_") || message.startsWith("GH_")) {
       return NextResponse.json({ error: "Caisse occupée, réessaie dans quelques secondes." }, { status: 503 });
     }
     console.error(error);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { confirmPaydunya, parseIpnPayload, paydunyaHashValid } from "@/lib/paydunya";
-import { markInvoicePaid } from "@/lib/store";
+import { markInvoicePaid, type Invoice } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +31,14 @@ export async function POST(request: Request) {
   const token = ipn.invoice?.token || ipn.token || "";
   const invoiceId = ipn.custom_data?.invoice_id;
   const status = (ipn.status || "").toLowerCase();
+  let snapshot: Partial<Invoice> | undefined;
+  if (ipn.custom_data?.snapshot) {
+    try {
+      snapshot = JSON.parse(ipn.custom_data.snapshot) as Partial<Invoice>;
+    } catch {
+      snapshot = undefined;
+    }
+  }
 
   if (token) {
     try {
@@ -41,16 +49,17 @@ export async function POST(request: Request) {
           invoiceId,
           paydunyaToken: token,
           method: "paydunya",
+          snapshot,
         });
       }
     } catch (error) {
       console.error("PayDunya confirm", error);
       if (status === "completed") {
-        await markInvoicePaid({ invoiceId, paydunyaToken: token, method: "paydunya" });
+        await markInvoicePaid({ invoiceId, paydunyaToken: token, method: "paydunya", snapshot });
       }
     }
   } else if (status === "completed" && invoiceId) {
-    await markInvoicePaid({ invoiceId, method: "paydunya" });
+    await markInvoicePaid({ invoiceId, method: "paydunya", snapshot });
   }
 
   return NextResponse.json({ ok: true });

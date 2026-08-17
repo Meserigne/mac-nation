@@ -97,6 +97,18 @@ export async function createPaydunyaCheckout(invoice: Invoice) {
         invoice_id: invoice.id,
         invoice_number: invoice.number,
         booking_id: invoice.bookingId || "",
+        snapshot: JSON.stringify({
+          id: invoice.id,
+          number: invoice.number,
+          clientName: invoice.clientName,
+          clientPhone: invoice.clientPhone,
+          clientEmail: invoice.clientEmail,
+          items: invoice.items,
+          amount: invoice.amount,
+          kind: invoice.kind || "",
+          note: invoice.note || "",
+          bookingId: invoice.bookingId || "",
+        }),
       },
       actions: {
         callback_url: `${origin}/api/paydunya/ipn`,
@@ -112,7 +124,11 @@ export async function createPaydunyaCheckout(invoice: Invoice) {
     throw new Error(json?.response_text || json?.description || `PAYDUNYA_${res.status}`);
   }
 
-  await attachPaydunya(invoice.id, json.token, json.response_text);
+  try {
+    await attachPaydunya(invoice.id, json.token, json.response_text);
+  } catch (error) {
+    console.error("Attach PayDunya token failed", error);
+  }
   return { token: json.token, url: json.response_text };
 }
 
