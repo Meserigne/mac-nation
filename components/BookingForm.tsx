@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useRef, useState } from "react";
 import { CaretLeft, CaretRight, CheckCircle } from "@phosphor-icons/react";
 import { services } from "@/lib/data";
+import { formatFcfa } from "@/lib/money";
 
 const WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"] as const;
 const MONTHS = [
@@ -29,6 +30,8 @@ type Confirmation = {
   time: string;
   place: "salon" | "domicile";
   address: string;
+  invoiceId?: string;
+  amount?: number;
 };
 
 function startOfDay(d: Date) {
@@ -150,12 +153,12 @@ export default function BookingForm() {
           address,
         }),
       });
-      const json = (await res.json().catch(() => null)) as { error?: string } | null;
+      const json = (await res.json().catch(() => null)) as { error?: string; invoiceId?: string; amount?: number } | null;
       if (!res.ok) {
         showMessage(json?.error || "Impossible d'envoyer la demande. Réessayez.");
         return;
       }
-      setDone(confirmation);
+      setDone({ ...confirmation, invoiceId: json?.invoiceId, amount: json?.amount });
       requestAnimationFrame(() => {
         box.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       });
@@ -203,8 +206,19 @@ export default function BookingForm() {
                 {done.place === "domicile" ? `À domicile · ${done.address}` : "Au salon, Nord Foire"}
               </span>
             </li>
+            {typeof done.amount === "number" && done.amount > 0 ? (
+              <li className="flex justify-between gap-4">
+                <span className="text-gray-500">Montant</span>
+                <span className="text-right">{formatFcfa(done.amount)}</span>
+              </li>
+            ) : null}
           </ul>
-          <button type="button" onClick={reset} className="btn-gold h-12 w-full cursor-pointer rounded-lg text-sm font-medium">
+          {done.invoiceId && (done.amount || 0) > 0 ? (
+            <a href={`/payer/${done.invoiceId}`} className="btn-gold flex h-12 w-full items-center justify-center rounded-lg text-sm font-medium">
+              Payer par Wave / Orange Money / Free
+            </a>
+          ) : null}
+          <button type="button" onClick={reset} className="h-12 w-full cursor-pointer rounded-lg bg-gray-900 text-sm text-white ring-1 ring-white/10 hover:bg-gray-800">
             Prendre un autre rendez-vous
           </button>
         </div>

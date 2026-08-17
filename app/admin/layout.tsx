@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import AdminNav from "@/components/admin/AdminNav";
 
 export const metadata: Metadata = {
   title: "Backoffice",
@@ -6,5 +7,10 @@ export const metadata: Metadata = {
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-dvh bg-[#070708] text-[#f4f4f5]">{children}</div>;
+  return (
+    <div className="min-h-dvh bg-[#070708] text-[#f4f4f5]">
+      <AdminNav />
+      {children}
+    </div>
+  );
 }

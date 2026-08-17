@@ -203,3 +203,15 @@ textarea,
 select {
   font: inherit;
 }
+
+@media print {
+  .no-print,
+  header {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+}

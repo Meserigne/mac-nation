@@ -67,9 +67,11 @@ export async function POST(request: Request) {
   const ownerMessage = ["MAC NATION : nouveau RDV", ...ownerLines].join("\n");
   const clientMessage = ["MAC NATION : votre RDV", ...clientLines].join("\n");
 
+  let invoiceId = "";
+  let amount = 0;
   if (bookingsConfigured()) {
     try {
-      await createBooking({
+      const booking = await createBooking({
         name,
         phone,
         email,
@@ -81,6 +83,8 @@ export async function POST(request: Request) {
         place,
         address,
       });
+      invoiceId = booking.invoiceId || "";
+      amount = booking.amount;
     } catch (error) {
       console.error("Booking save failed", error);
       return NextResponse.json({ error: "Impossible d'enregistrer le rendez-vous." }, { status: 500 });
@@ -109,5 +113,5 @@ export async function POST(request: Request) {
     ]);
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, invoiceId, amount });
 }

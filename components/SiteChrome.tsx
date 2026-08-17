@@ -7,7 +7,7 @@ import Preloader from "@/components/Preloader";
 
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  if (pathname.startsWith("/admin")) return children;
+  if (pathname.startsWith("/admin") || pathname.startsWith("/payer") || pathname.startsWith("/paiement")) return children;
   return (
     <>
       <Preloader />
