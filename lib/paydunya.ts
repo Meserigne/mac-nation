@@ -24,10 +24,7 @@ export function paydunyaConfigured() {
 }
 
 function mode() {
-  const privateKey = process.env.PAYDUNYA_PRIVATE_KEY || "";
-  if (privateKey.startsWith("live_")) return "live";
-  if (privateKey.startsWith("test_")) return "test";
-  return process.env.PAYDUNYA_MODE === "live" ? "live" : "test";
+  return "live";
 }
 
 function apiBase() {
@@ -311,13 +308,11 @@ export async function startSoftPay(opts: {
   const name = (opts.name || invoice.clientName || "Client MAC NATION").trim();
   const email = payerEmail(opts.email || invoice.clientEmail, phone);
 
-  if (mode() === "live") {
-    try {
-      const checkout = await startCheckout(opts.invoiceId);
-      return await requestOperatorSoftPay(opts.method, checkout.token, name, email, phone);
-    } catch (error) {
-      console.error("PayDunya SoftPay failed, using operator checkout", error);
-    }
+  try {
+    const checkout = await startCheckout(opts.invoiceId);
+    return await requestOperatorSoftPay(opts.method, checkout.token, name, email, phone);
+  } catch (error) {
+    console.error("PayDunya SoftPay failed, using operator checkout", error);
   }
 
   const checkout = await createPaydunyaCheckout(invoice, { channels: [SOFTPAY_CHANNELS[opts.method]] });
