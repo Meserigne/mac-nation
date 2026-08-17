@@ -6,6 +6,8 @@ import { sendBookingEmail } from "@/lib/notify";
 import { bookingsConfigured, createWalkInInvoice } from "@/lib/store";
 import { startCheckout } from "@/lib/paydunya";
 
+export const maxDuration = 30;
+
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -92,7 +94,10 @@ export async function POST(request: Request) {
     if (message === "PAYDUNYA_MISSING") {
       return NextResponse.json({ error: "Paiement Mobile Money indisponible pour le moment." }, { status: 503 });
     }
+    if (message.startsWith("GIST_")) {
+      return NextResponse.json({ error: "Caisse occupée, réessaie dans quelques secondes." }, { status: 503 });
+    }
     console.error(error);
-    return NextResponse.json({ error: "Impossible d'ouvrir le paiement." }, { status: 502 });
+    return NextResponse.json({ error: "Impossible d'ouvrir le paiement. Réessaie." }, { status: 502 });
   }
 }

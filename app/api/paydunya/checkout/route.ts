@@ -16,6 +16,9 @@ export async function POST(request: Request) {
     if (message === "INVOICE_MISSING") return NextResponse.json({ error: "Facture introuvable." }, { status: 404 });
     if (message === "ALREADY_PAID") return NextResponse.json({ error: "Cette facture est déjà payée." }, { status: 400 });
     if (message === "AMOUNT_ZERO") return NextResponse.json({ error: "Montant à confirmer au salon." }, { status: 400 });
+    if (message.startsWith("GIST_")) {
+      return NextResponse.json({ error: "Caisse occupée, réessaie dans quelques secondes." }, { status: 503 });
+    }
     console.error(error);
     return NextResponse.json({ error: "Impossible d'ouvrir PayDunya." }, { status: 502 });
   }

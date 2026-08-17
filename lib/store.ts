@@ -167,17 +167,30 @@ async function gistHeaders() {
     Authorization: `Bearer ${process.env.BOOKINGS_GITHUB_TOKEN}`,
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "MAC-NATION",
   };
+}
+
+async function gistRequest(url: string, init: RequestInit, label: "LOAD" | "SAVE") {
+  let lastStatus = 0;
+  let lastBody = "";
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const res = await fetch(url, { ...init, cache: "no-store" });
+    lastStatus = res.status;
+    if (res.ok) return res;
+    lastBody = await res.text().catch(() => "");
+    const retryable = lastStatus === 429 || lastStatus === 502 || lastStatus === 503 || lastStatus === 504;
+    if (!retryable || attempt === 4) break;
+    await new Promise((resolve) => setTimeout(resolve, 300 * 2 ** attempt));
+  }
+  console.error(`GIST_${label}`, lastStatus, lastBody.slice(0, 400));
+  throw new Error(`GIST_${label}_${lastStatus}`);
 }
 
 async function loadFromGist(): Promise<SalonStore> {
   const id = process.env.BOOKINGS_GIST_ID;
   if (!id) throw new Error("GIST_MISSING");
-  const res = await fetch(`https://api.github.com/gists/${id}`, {
-    headers: await gistHeaders(),
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`GIST_LOAD_${res.status}`);
+  const res = await gistRequest(`https://api.github.com/gists/${id}`, { headers: await gistHeaders() }, "LOAD");
   const gist = (await res.json()) as { files?: Record<string, { content?: string }> };
   const salonRaw = gist.files?.["salon.json"]?.content;
   if (salonRaw) return normalizeStore(JSON.parse(salonRaw));
@@ -188,17 +201,19 @@ async function loadFromGist(): Promise<SalonStore> {
 async function saveToGist(store: SalonStore) {
   const id = process.env.BOOKINGS_GIST_ID;
   if (!id) throw new Error("GIST_MISSING");
-  const res = await fetch(`https://api.github.com/gists/${id}`, {
-    method: "PATCH",
-    headers: { ...(await gistHeaders()), "Content-Type": "application/json" },
-    body: JSON.stringify({
-      files: {
-        "salon.json": { content: JSON.stringify(store, null, 2) },
-        "bookings.json": { content: JSON.stringify(store.bookings, null, 2) },
-      },
-    }),
-  });
-  if (!res.ok) throw new Error(`GIST_SAVE_${res.status}`);
+  await gistRequest(
+    `https://api.github.com/gists/${id}`,
+    {
+      method: "PATCH",
+      headers: { ...(await gistHeaders()), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        files: {
+          "salon.json": { content: JSON.stringify(store) },
+        },
+      }),
+    },
+    "SAVE",
+  );
 }
 
 async function loadFromRedis(): Promise<SalonStore> {

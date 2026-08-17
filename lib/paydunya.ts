@@ -80,12 +80,13 @@ export async function createPaydunyaCheckout(invoice: Invoice) {
         total_amount: invoice.amount,
         description: `MAC NATION ${invoice.number}`,
         items,
-        customer: {
-          name: invoice.clientName,
-          email: invoice.clientEmail || undefined,
-          phone: invoice.clientPhone,
-        },
-        channels: ["wave-senegal", "orange-money-senegal", "free-money-senegal", "expresso-sn", "card"],
+        customer: invoice.clientName
+          ? {
+              name: invoice.clientName,
+              ...(invoice.clientEmail ? { email: invoice.clientEmail } : {}),
+              phone: invoice.clientPhone.replace(/\D/g, "").slice(-9),
+            }
+          : undefined,
       },
       store: {
         name: "MAC NATION",
@@ -107,6 +108,7 @@ export async function createPaydunyaCheckout(invoice: Invoice) {
 
   const json = (await res.json().catch(() => null)) as PaydunyaCreateResponse | null;
   if (!res.ok || json?.response_code !== "00" || !json.token || !json.response_text) {
+    console.error("PayDunya create failed", res.status, json);
     throw new Error(json?.response_text || json?.description || `PAYDUNYA_${res.status}`);
   }
 
