@@ -5,10 +5,15 @@ import Link from "next/link";
 import { formatFcfa } from "@/lib/money";
 
 type SoftPayMethod = "wave" | "orange" | "free";
-type SoftPayResult =
-  | { method: "wave"; message: string; url: string; error?: string }
-  | { method: "orange"; message: string; qr: string; omUrl: string; maxitUrl: string; error?: string }
-  | { method: "free"; message: string; error?: string };
+type SoftPayResult = {
+  method: SoftPayMethod;
+  message: string;
+  url?: string;
+  qr?: string;
+  omUrl?: string;
+  maxitUrl?: string;
+  error?: string;
+};
 
 type Props = {
   invoiceId: string;
@@ -81,9 +86,9 @@ export default function SoftPay({ invoiceId, amount, name, phone, email, hideAmo
       }
       setResult(json);
       setWaiting(true);
-      if (json.method === "wave" && json.url) {
+      if (json.url) {
         const opened = window.open(json.url, "_blank", "noopener,noreferrer");
-        if (!opened) setError("Autorise l’ouverture de Wave, puis clique Ouvrir Wave.");
+        if (!opened) setError("Autorise la fenêtre de paiement, puis clique Continuer.");
       }
     } catch {
       setError("Connexion interrompue. Réessaie.");
@@ -142,7 +147,7 @@ export default function SoftPay({ invoiceId, amount, name, phone, email, hideAmo
         />
       </label>
 
-      {result?.method === "orange" ? (
+      {result?.qr || result?.omUrl || result?.maxitUrl ? (
         <div className="mt-5 rounded-xl bg-white p-4 text-center">
           {result.qr ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -162,21 +167,19 @@ export default function SoftPay({ invoiceId, amount, name, phone, email, hideAmo
             ) : null}
           </div>
         </div>
+      ) : result?.message && waiting ? (
+        <p className="mt-5 rounded-xl bg-gray-900 px-4 py-3 text-sm text-gray-200 ring-1 ring-white/10">{result.message}</p>
       ) : null}
 
-      {result?.method === "wave" ? (
+      {result?.url ? (
         <a
           href={result.url}
           target="_blank"
           rel="noreferrer"
           className="btn-gold mt-5 flex h-12 items-center justify-center rounded-lg text-sm font-medium"
         >
-          Ouvrir Wave
+          Continuer {METHODS.find((item) => item.id === result.method)?.label}
         </a>
-      ) : null}
-
-      {result?.method === "free" ? (
-        <p className="mt-5 rounded-xl bg-gray-900 px-4 py-3 text-sm text-gray-200 ring-1 ring-white/10">{result.message}</p>
       ) : null}
 
       {waiting ? <p className="mt-4 text-sm text-[#c4a574]">En attente de confirmation sur ton téléphone…</p> : null}
