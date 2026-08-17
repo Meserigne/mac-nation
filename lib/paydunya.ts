@@ -22,6 +22,9 @@ export function paydunyaConfigured() {
 }
 
 function mode() {
+  const privateKey = process.env.PAYDUNYA_PRIVATE_KEY || "";
+  if (privateKey.startsWith("live_")) return "live";
+  if (privateKey.startsWith("test_")) return "test";
   return process.env.PAYDUNYA_MODE === "live" ? "live" : "test";
 }
 
@@ -34,6 +37,7 @@ function headers() {
     "Content-Type": "application/json",
     "PAYDUNYA-MASTER-KEY": process.env.PAYDUNYA_MASTER_KEY || "",
     "PAYDUNYA-PRIVATE-KEY": process.env.PAYDUNYA_PRIVATE_KEY || "",
+    "PAYDUNYA-PUBLIC-KEY": process.env.PAYDUNYA_PUBLIC_KEY || "",
     "PAYDUNYA-TOKEN": process.env.PAYDUNYA_TOKEN || "",
   };
 }
