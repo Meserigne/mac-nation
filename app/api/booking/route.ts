@@ -56,12 +56,13 @@ export async function POST(request: Request) {
     );
   }
 
+  const when = `${dateLabel} à ${time}`;
   const lieu = place === "domicile" ? `Domicile: ${address}` : "Salon Nord Foire";
   const ownerMessage = [
-    "MAC NATION — nouveau RDV",
+    "MAC NATION : nouveau RDV",
     `${name} · ${phone}`,
-    email ? email : null,
-    `${dateLabel} à ${time}`,
+    email || null,
+    when,
     service.name,
     lieu,
   ]
@@ -69,12 +70,11 @@ export async function POST(request: Request) {
     .join("\n");
 
   const clientMessage = [
-    `MAC NATION — Bonjour ${name},`,
-    "votre rendez-vous est bien demandé.",
-    `${dateLabel} à ${time}`,
+    "MAC NATION : votre RDV",
+    name,
+    when,
     service.name,
     lieu,
-    "Nous vous appelons pour confirmer.",
   ].join("\n");
 
   try {
