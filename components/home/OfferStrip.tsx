@@ -20,8 +20,11 @@ export default function OfferStrip() {
             <div className="absolute right-0 bottom-0 left-0 p-8">
               <h2 className="font-bebas text-5xl text-white">Boutique capillaire</h2>
               <p className="mt-2 max-w-[40ch] text-sm text-gray-300">
-                Les produits de la vitrine, les mêmes qu&apos;on utilise en chaise, à emporter.
+                Payer par Wave, Orange Money ou Free. Retrait au salon Nord Foire.
               </p>
+              <span className="btn-gold mt-5 inline-flex h-10 items-center rounded-lg px-4 text-sm font-medium">
+                Payer un produit
+              </span>
             </div>
           </Link>
         </Reveal>
@@ -38,8 +41,11 @@ export default function OfferStrip() {
             <div className="absolute right-0 bottom-0 left-0 p-8">
               <h2 className="font-bebas text-5xl text-white">Abonnements</h2>
               <p className="mt-2 max-w-[42ch] text-sm text-gray-300">
-                Deux ou quatre visites par mois. Un rythme, un prix, un salon qui vous connaît.
+                Payer l&apos;abonnement en ligne. Wave, Orange Money ou Free Money.
               </p>
+              <span className="btn-gold mt-5 inline-flex h-10 items-center rounded-lg px-4 text-sm font-medium">
+                Payer un abonnement
+              </span>
             </div>
           </Link>
         </Reveal>

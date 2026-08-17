@@ -5,11 +5,13 @@ import AllBlackSalon from "@/components/home/AllBlackSalon";
 import Reviews from "@/components/home/Reviews";
 import OfferStrip from "@/components/home/OfferStrip";
 import JoinCTA from "@/components/home/JoinCTA";
+import PayBar from "@/components/PayBar";
 
 export default function HomePage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-between">
       <Hero />
+      <PayBar />
       <News />
       <BrandExperience />
       <AllBlackSalon />

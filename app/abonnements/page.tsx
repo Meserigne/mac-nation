@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import PageHero from "@/components/PageHero";
+import PayBar from "@/components/PayBar";
 import Reveal from "@/components/Reveal";
 import { plans } from "@/lib/data";
 import { pageImages, people, photos } from "@/lib/assets";
@@ -14,23 +15,12 @@ export default function AbonnementsPage() {
   return (
     <main>
       <PageHero
+        kicker="Wave · Orange Money · Free Money"
         title="Abonnements"
-        subtitle="Un rythme, un prix, un salon. Valable uniquement à Nord Foire."
+        subtitle="Payer en ligne par Wave, Orange Money ou Free Money. Valable uniquement à Nord Foire."
         image={pageImages.abonnements}
       />
-      <section className="mx-auto mb-10 max-w-[1100px] px-6">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          {[
-            { src: people.waiting, alt: "Clients en attente" },
-            { src: photos.lounge, alt: "Lounge" },
-            { src: people.cut, alt: "Coupe en salon" },
-          ].map((shot) => (
-            <div key={shot.src} className="relative aspect-[16/10] overflow-hidden rounded-xl">
-              <Image src={shot.src} alt={shot.alt} fill className="object-cover" sizes="33vw" />
-            </div>
-          ))}
-        </div>
-      </section>
+      <PayBar />
       <section className="mx-auto grid max-w-[1100px] grid-cols-1 gap-6 px-6 pb-12 md:grid-cols-3">
         {plans.map((plan, i) => (
           <Reveal key={plan.id} delay={i * 0.06}>
@@ -54,21 +44,29 @@ export default function AbonnementsPage() {
               </ul>
               <Link
                 href={`/abonnements/payer/${plan.id}`}
-                className={`mt-8 inline-flex h-11 items-center justify-center rounded-lg text-sm transition-all ${
-                  plan.highlight
-                    ? "btn-gold"
-                    : "bg-gray-400/15 text-white hover:bg-gray-200/80 hover:text-gray-950"
-                }`}
+                className="btn-gold mt-8 inline-flex h-12 items-center justify-center rounded-lg text-sm font-medium"
               >
-                Payer l'abonnement
+                Payer par Wave / Orange / Free
               </Link>
             </article>
           </Reveal>
         ))}
       </section>
+      <section className="mx-auto mb-10 max-w-[1100px] px-6">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {[
+            { src: people.waiting, alt: "Clients en attente" },
+            { src: photos.lounge, alt: "Lounge" },
+            { src: people.cut, alt: "Coupe en salon" },
+          ].map((shot) => (
+            <div key={shot.src} className="relative aspect-[16/10] overflow-hidden rounded-xl">
+              <Image src={shot.src} alt={shot.alt} fill className="object-cover" sizes="33vw" />
+            </div>
+          ))}
+        </div>
+      </section>
       <p className="mx-auto max-w-[60ch] px-6 pb-24 text-center text-sm text-gray-500">
-        Paie par Wave, Orange Money ou Free Money. L'abonnement démarre dès le paiement, uniquement à Nord Foire. Les
-        visites non utilisées ne se reportent pas au mois suivant.
+        L&apos;abonnement démarre dès le paiement. Les visites non utilisées ne se reportent pas au mois suivant.
       </p>
     </main>
   );

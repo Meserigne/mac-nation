@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import PageHero from "@/components/PageHero";
+import PayBar from "@/components/PayBar";
 import Reveal from "@/components/Reveal";
 import { services } from "@/lib/data";
 import { pageImages } from "@/lib/assets";
@@ -17,6 +19,7 @@ export default function ServicesPage() {
         subtitle="Prestations au salon de Nord Foire, ou à domicile. Hommes, ados et enfants. Tarifs en francs CFA."
         image={pageImages.services}
       />
+      <PayBar />
       <section className="mx-auto grid max-w-[1100px] grid-cols-1 gap-5 px-6 pb-28 md:grid-cols-2">
         {services.map((s, i) => (
           <Reveal key={s.id} delay={i * 0.05}>
@@ -32,10 +35,16 @@ export default function ServicesPage() {
                   <h2 className="font-bebas text-4xl text-white">{s.name}</h2>
                   <p className="mt-3 text-sm leading-relaxed text-gray-400">{s.description}</p>
                 </div>
-                <div className="mt-8 flex items-end justify-between">
+                <div className="mt-8 flex items-end justify-between gap-3">
                   <span className="text-xs text-gray-500">{s.duration}</span>
                   <span className="font-bebas text-3xl text-white">{s.price}</span>
                 </div>
+                <Link
+                  href="/rendez-vous"
+                  className="btn-gold mt-4 inline-flex h-11 items-center justify-center rounded-lg text-sm font-medium"
+                >
+                  Réserver et payer
+                </Link>
               </div>
             </article>
           </Reveal>

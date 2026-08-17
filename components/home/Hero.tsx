@@ -112,7 +112,7 @@ export default function Hero() {
               href="/rendez-vous"
               className="bbx-shine-sweep btn-gold flex cursor-pointer items-center justify-center gap-x-3 rounded-[10px] px-3.5 py-3.5 text-md font-medium transition-all duration-300 active:scale-[0.98] sm:px-6 sm:text-lg"
             >
-              Prendre rendez-vous
+              Prendre rendez-vous et payer
             </Link>
           </div>
         </motion.div>

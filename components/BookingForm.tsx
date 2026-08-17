@@ -231,6 +231,28 @@ export default function BookingForm() {
         </div>
       ) : (
         <form noValidate onSubmit={onSubmit} className="flex flex-col gap-7">
+          <div className="rounded-xl bg-[#c4a574] p-4 text-[#0b0b0c]">
+            <p className="text-sm font-medium">Paiement du rendez-vous</p>
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setPayNow(true)}
+                className={`cursor-pointer rounded-lg px-4 py-3 text-left text-sm ${payNow ? "bg-black text-white" : "bg-black/10 text-black"}`}
+              >
+                Payer maintenant
+                <span className={`mt-1 block text-xs ${payNow ? "text-white/70" : "text-black/60"}`}>Wave · Orange · Free</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPayNow(false)}
+                className={`cursor-pointer rounded-lg px-4 py-3 text-left text-sm ${!payNow ? "bg-black text-white" : "bg-black/10 text-black"}`}
+              >
+                Payer au salon
+                <span className={`mt-1 block text-xs ${!payNow ? "text-white/70" : "text-black/60"}`}>Espèces ou Mobile Money</span>
+              </button>
+            </div>
+          </div>
+
           <div>
             <p className="text-sm font-medium text-white">Lieu</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
@@ -409,28 +431,6 @@ export default function BookingForm() {
               {error}
             </p>
           ) : null}
-
-          <div className="rounded-xl bg-gray-900 p-4 ring-1 ring-white/10">
-            <p className="text-sm font-medium text-white">Paiement</p>
-            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setPayNow(true)}
-                className={`cursor-pointer rounded-lg px-4 py-3 text-left text-sm ${payNow ? "btn-gold" : "text-gray-300 ring-1 ring-white/10 hover:bg-gray-800"}`}
-              >
-                Payer maintenant
-                <span className={`mt-1 block text-xs ${payNow ? "text-black/70" : "text-gray-500"}`}>Wave · Orange · Free</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPayNow(false)}
-                className={`cursor-pointer rounded-lg px-4 py-3 text-left text-sm ${!payNow ? "btn-gold" : "text-gray-300 ring-1 ring-white/10 hover:bg-gray-800"}`}
-              >
-                Payer au salon
-                <span className={`mt-1 block text-xs ${!payNow ? "text-black/70" : "text-gray-500"}`}>Espèces ou Mobile Money</span>
-              </button>
-            </div>
-          </div>
 
           <button
             type="submit"

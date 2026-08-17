@@ -62,9 +62,9 @@ export default function Header() {
           <li className="relative">
             <Link
               href="/rendez-vous"
-              className="btn-gold inline-flex h-10 cursor-pointer items-center justify-center rounded-lg px-8 text-[14px] font-medium transition-all duration-300 active:scale-[0.98]"
+              className="btn-gold inline-flex h-10 cursor-pointer items-center justify-center rounded-lg px-5 text-[14px] font-medium transition-all duration-300 active:scale-[0.98] sm:px-8"
             >
-              Réserver
+              Réserver · Payer
             </Link>
           </li>
           <li className="relative flex items-center justify-center lg:hidden">
