@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
-import { CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { FormEvent, useMemo, useRef, useState } from "react";
+import { CaretLeft, CaretRight, CheckCircle } from "@phosphor-icons/react";
 import { services } from "@/lib/data";
 
 const WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"] as const;
@@ -19,6 +19,16 @@ const MONTHS = [
   "Novembre",
   "Décembre",
 ] as const;
+
+type Confirmation = {
+  name: string;
+  phone: string;
+  service: string;
+  dateLabel: string;
+  time: string;
+  place: "salon" | "domicile";
+  address: string;
+};
 
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -53,14 +63,19 @@ function weekdayLabel(date: Date) {
   return new Intl.DateTimeFormat("fr-FR", { weekday: "long" }).format(date);
 }
 
+function dateLabel(date: Date) {
+  return `${weekdayLabel(date)} ${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+}
+
 export default function BookingForm() {
   const today = startOfDay(new Date());
+  const box = useRef<HTMLDivElement>(null);
   const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [selected, setSelected] = useState<Date | null>(null);
   const [time, setTime] = useState("");
   const [place, setPlace] = useState<"salon" | "domicile">("salon");
-  const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [done, setDone] = useState<Confirmation | null>(null);
 
   const cells = useMemo(() => {
     const year = cursor.getFullYear();
@@ -77,211 +92,276 @@ export default function BookingForm() {
 
   const times = selected ? slotsFor(selected) : [];
 
+  function showMessage(message: string) {
+    setError(message);
+    requestAnimationFrame(() => {
+      box.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const data = new FormData(e.currentTarget);
+    const form = e.target as HTMLFormElement;
+    const data = new FormData(form);
     const name = String(data.get("name") || "").trim();
     const phone = String(data.get("phone") || "").trim();
-    const service = String(data.get("service") || "").trim();
+    const serviceId = String(data.get("service") || "").trim();
     const address = String(data.get("address") || "").trim();
+    const service = services.find((s) => s.id === serviceId);
+
     if (!name || !phone || !service || !selected || !time) {
-      setError("Merci de renseigner le nom, le téléphone, le jour, l'heure et la prestation.");
-      setSent(false);
+      showMessage("Choisissez un jour, une heure et une prestation, puis indiquez votre nom et votre téléphone.");
       return;
     }
     if (place === "domicile" && !address) {
-      setError("Pour une coiffure à domicile, indiquez le quartier et l'adresse.");
-      setSent(false);
+      showMessage("Pour une coiffure à domicile, indiquez le quartier et l'adresse.");
       return;
     }
+
     setError("");
-    setSent(true);
+    setDone({
+      name,
+      phone,
+      service: `${service.name} · ${service.price}`,
+      dateLabel: dateLabel(selected),
+      time,
+      place,
+      address,
+    });
+    requestAnimationFrame(() => {
+      box.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+
+  function reset() {
+    setDone(null);
+    setSelected(null);
+    setTime("");
+    setPlace("salon");
+    setError("");
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-7 rounded-2xl bg-gray-950 p-6 stroke-gradient [--stroke-opacity:0.2] sm:p-8">
-      <div>
-        <p className="text-sm font-medium text-white">Lieu</p>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {(
-            [
-              { id: "salon", label: "Au salon", hint: "Nord Foire" },
-              { id: "domicile", label: "À domicile", hint: "+ 2 000 F" },
-            ] as const
-          ).map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => setPlace(opt.id)}
-              className={`cursor-pointer rounded-xl px-4 py-3 text-left transition-colors ${
-                place === opt.id ? "btn-gold" : "bg-gray-900 text-gray-300 ring-1 ring-white/10 hover:bg-gray-800"
-              }`}
-            >
-              <span className="block text-sm font-medium">{opt.label}</span>
-              <span className={`mt-0.5 block text-xs ${place === opt.id ? "text-black/70" : "text-gray-500"}`}>
-                {opt.hint}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <label className="flex flex-col gap-2 text-sm text-gray-200">
-        Prestation *
-        <select
-          name="service"
-          className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
-          defaultValue=""
-        >
-          <option value="" disabled>
-            Choisir
-          </option>
-          {services.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name} · {s.price}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <div>
-        <div className="flex items-center justify-between">
-          <p className="font-bebas text-2xl text-white">
-            {MONTHS[cursor.getMonth()]} {cursor.getFullYear()}
-          </p>
-          <div className="flex gap-1">
-            <button
-              type="button"
-              aria-label="Mois précédent"
-              onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-gray-900 text-white hover:bg-gray-800"
-            >
-              <CaretLeft size={16} />
-            </button>
-            <button
-              type="button"
-              aria-label="Mois suivant"
-              onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-gray-900 text-white hover:bg-gray-800"
-            >
-              <CaretRight size={16} />
-            </button>
+    <div ref={box} className="rounded-2xl bg-gray-950 p-6 stroke-gradient [--stroke-opacity:0.2] sm:p-8">
+      {done ? (
+        <div className="flex flex-col items-start gap-5">
+          <CheckCircle size={42} weight="fill" className="text-[#c4a574]" />
+          <div>
+            <p className="font-bebas text-4xl text-white">Rendez-vous demandé</p>
+            <p className="mt-2 text-sm text-gray-400">
+              Merci {done.name}. Nous vous rappelons au {done.phone} pour confirmer.
+            </p>
           </div>
+          <ul className="w-full space-y-3 border-y border-white/10 py-5 text-sm text-gray-200">
+            <li className="flex justify-between gap-4">
+              <span className="text-gray-500">Quand</span>
+              <span className="text-right capitalize">
+                {done.dateLabel} · {done.time}
+              </span>
+            </li>
+            <li className="flex justify-between gap-4">
+              <span className="text-gray-500">Prestation</span>
+              <span className="text-right">{done.service}</span>
+            </li>
+            <li className="flex justify-between gap-4">
+              <span className="text-gray-500">Lieu</span>
+              <span className="text-right">
+                {done.place === "domicile" ? `À domicile · ${done.address}` : "Au salon, Nord Foire"}
+              </span>
+            </li>
+          </ul>
+          <button type="button" onClick={reset} className="btn-gold h-12 w-full cursor-pointer rounded-lg text-sm font-medium">
+            Prendre un autre rendez-vous
+          </button>
         </div>
-        <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[11px] text-gray-500">
-          {WEEKDAYS.map((d) => (
-            <span key={d} className="py-1">
-              {d}
-            </span>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-1">
-          {cells.map((day, i) => {
-            if (!day) return <span key={`e-${i}`} />;
-            const past = startOfDay(day) < today;
-            const active = selected ? sameDay(day, selected) : false;
-            return (
-              <button
-                key={day.toISOString()}
-                type="button"
-                disabled={past}
-                onClick={() => {
-                  setSelected(day);
-                  setTime("");
-                }}
-                className={`h-10 cursor-pointer rounded-lg text-sm transition-colors disabled:cursor-not-allowed disabled:text-gray-700 ${
-                  active ? "btn-gold font-semibold" : "text-gray-200 hover:bg-white/5 disabled:hover:bg-transparent"
-                }`}
-              >
-                {day.getDate()}
-              </button>
-            );
-          })}
-        </div>
-        {selected ? (
-          <p className="mt-3 text-sm capitalize text-gray-400">
-            {weekdayLabel(selected)} {selected.getDate()} {MONTHS[selected.getMonth()]} {selected.getFullYear()}
-          </p>
-        ) : (
-          <p className="mt-3 text-sm text-gray-500">Choisissez un jour.</p>
-        )}
-      </div>
-
-      {selected ? (
-        <div>
-          <p className="text-sm font-medium text-white">Heure *</p>
-          {times.length === 0 ? (
-            <p className="mt-3 text-sm text-gray-500">Plus de créneau ce jour-là. Choisissez une autre date.</p>
-          ) : (
-            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {times.map((slot) => (
+      ) : (
+        <form noValidate onSubmit={onSubmit} className="flex flex-col gap-7">
+          <div>
+            <p className="text-sm font-medium text-white">Lieu</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {(
+                [
+                  { id: "salon", label: "Au salon", hint: "Nord Foire" },
+                  { id: "domicile", label: "À domicile", hint: "+ 2 000 F" },
+                ] as const
+              ).map((opt) => (
                 <button
-                  key={slot}
+                  key={opt.id}
                   type="button"
-                  onClick={() => setTime(slot)}
-                  className={`h-10 cursor-pointer rounded-lg text-sm transition-colors ${
-                    time === slot ? "btn-gold font-medium" : "bg-gray-900 text-gray-300 ring-1 ring-white/10 hover:bg-gray-800"
+                  onClick={() => setPlace(opt.id)}
+                  className={`cursor-pointer rounded-xl px-4 py-3 text-left transition-colors ${
+                    place === opt.id ? "btn-gold" : "bg-gray-900 text-gray-300 ring-1 ring-white/10 hover:bg-gray-800"
                   }`}
                 >
-                  {slot}
+                  <span className="block text-sm font-medium">{opt.label}</span>
+                  <span className={`mt-0.5 block text-xs ${place === opt.id ? "text-black/70" : "text-gray-500"}`}>
+                    {opt.hint}
+                  </span>
                 </button>
               ))}
             </div>
-          )}
-        </div>
-      ) : null}
+          </div>
 
-      <label className="flex flex-col gap-2 text-sm text-gray-200">
-        Nom complet *
-        <input
-          name="name"
-          className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
-        />
-      </label>
-      <label className="flex flex-col gap-2 text-sm text-gray-200">
-        Téléphone *
-        <input
-          name="phone"
-          type="tel"
-          className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
-        />
-      </label>
-      <label className="flex flex-col gap-2 text-sm text-gray-200">
-        Email
-        <input
-          name="email"
-          type="email"
-          className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
-        />
-      </label>
-      {place === "domicile" ? (
-        <label className="flex flex-col gap-2 text-sm text-gray-200">
-          Adresse / quartier *
-          <input
-            name="address"
-            placeholder="Ex. Nord Foire, près du service d'hygiène"
-            className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 placeholder:text-gray-500 focus:ring-[#c4a574]/50"
-          />
-        </label>
-      ) : null}
+          <label className="flex flex-col gap-2 text-sm text-gray-200">
+            Prestation *
+            <select
+              name="service"
+              required
+              className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
+              defaultValue=""
+            >
+              <option value="" disabled>
+                Choisir
+              </option>
+              {services.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} · {s.price}
+                </option>
+              ))}
+            </select>
+          </label>
 
-      {error ? <p className="text-sm text-red-400">{error}</p> : null}
-      {sent ? (
-        <p className="text-sm text-gray-200">
-          Demande envoyée
-          {selected && time
-            ? ` pour le ${selected.getDate()} ${MONTHS[selected.getMonth()]} à ${time}`
-            : ""}
-          {place === "domicile" ? ", à domicile" : ", au salon"}. Nous confirmons par téléphone.
-        </p>
-      ) : null}
+          <div>
+            <div className="flex items-center justify-between">
+              <p className="font-bebas text-2xl text-white">
+                {MONTHS[cursor.getMonth()]} {cursor.getFullYear()}
+              </p>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  aria-label="Mois précédent"
+                  onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-gray-900 text-white hover:bg-gray-800"
+                >
+                  <CaretLeft size={16} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Mois suivant"
+                  onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-gray-900 text-white hover:bg-gray-800"
+                >
+                  <CaretRight size={16} />
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[11px] text-gray-500">
+              {WEEKDAYS.map((d) => (
+                <span key={d} className="py-1">
+                  {d}
+                </span>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {cells.map((day, i) => {
+                if (!day) return <span key={`e-${i}`} />;
+                const past = startOfDay(day) < today;
+                const active = selected ? sameDay(day, selected) : false;
+                return (
+                  <button
+                    key={day.toISOString()}
+                    type="button"
+                    disabled={past}
+                    onClick={() => {
+                      setSelected(day);
+                      setTime("");
+                      setError("");
+                    }}
+                    className={`h-10 cursor-pointer rounded-lg text-sm transition-colors disabled:cursor-not-allowed disabled:text-gray-700 ${
+                      active ? "btn-gold font-semibold" : "text-gray-200 hover:bg-white/5 disabled:hover:bg-transparent"
+                    }`}
+                  >
+                    {day.getDate()}
+                  </button>
+                );
+              })}
+            </div>
+            {selected ? (
+              <p className="mt-3 text-sm capitalize text-gray-400">{dateLabel(selected)}</p>
+            ) : (
+              <p className="mt-3 text-sm text-gray-500">Choisissez un jour.</p>
+            )}
+          </div>
 
-      <button type="submit" className="btn-gold h-12 cursor-pointer rounded-lg text-sm font-medium active:scale-[0.98]">
-        Confirmer le rendez-vous
-      </button>
-      <p className="text-xs text-gray-500">
-        Salon : lun–sam 10h–21h, dim 12h–20h. À domicile : déplacement 2 000 F, Dakar uniquement.
-      </p>
-    </form>
+          {selected ? (
+            <div>
+              <p className="text-sm font-medium text-white">Heure *</p>
+              {times.length === 0 ? (
+                <p className="mt-3 text-sm text-gray-500">Plus de créneau ce jour-là. Choisissez une autre date.</p>
+              ) : (
+                <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {times.map((slot) => (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => {
+                        setTime(slot);
+                        setError("");
+                      }}
+                      className={`h-10 cursor-pointer rounded-lg text-sm transition-colors ${
+                        time === slot ? "btn-gold font-medium" : "bg-gray-900 text-gray-300 ring-1 ring-white/10 hover:bg-gray-800"
+                      }`}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          <label className="flex flex-col gap-2 text-sm text-gray-200">
+            Nom complet *
+            <input
+              name="name"
+              autoComplete="name"
+              className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-sm text-gray-200">
+            Téléphone *
+            <input
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-sm text-gray-200">
+            Email
+            <input
+              name="email"
+              type="text"
+              inputMode="email"
+              autoComplete="email"
+              className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
+            />
+          </label>
+          {place === "domicile" ? (
+            <label className="flex flex-col gap-2 text-sm text-gray-200">
+              Adresse / quartier *
+              <input
+                name="address"
+                placeholder="Ex. Nord Foire, près du service d'hygiène"
+                className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 placeholder:text-gray-500 focus:ring-[#c4a574]/50"
+              />
+            </label>
+          ) : null}
+
+          {error ? (
+            <p role="alert" className="rounded-lg bg-red-500/15 px-4 py-3 text-sm text-red-300">
+              {error}
+            </p>
+          ) : null}
+
+          <button type="submit" className="btn-gold h-12 cursor-pointer rounded-lg text-sm font-medium active:scale-[0.98]">
+            Confirmer le rendez-vous
+          </button>
+          <p className="text-xs text-gray-500">
+            Salon : lun–sam 10h–21h, dim 12h–20h. À domicile : déplacement 2 000 F, Dakar uniquement.
+          </p>
+        </form>
+      )}
+    </div>
   );
 }
