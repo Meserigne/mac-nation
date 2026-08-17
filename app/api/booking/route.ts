@@ -74,8 +74,8 @@ export async function POST(request: Request) {
   }
 
   await Promise.allSettled([
-    sendWhatsApp(owner, ownerMessage),
-    sendWhatsApp(phone, clientMessage),
+    sendWhatsApp(owner, `${name} · ${phone}`, `${when} · ${service.name}`),
+    sendWhatsApp(phone, dateLabel, `${time} · ${service.name} · ${lieu}`),
     sendBookingEmail({
       subject: "MAC NATION : nouveau RDV",
       title: "MAC NATION : nouveau RDV",

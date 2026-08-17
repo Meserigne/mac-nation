@@ -1,9 +1,12 @@
 import { normalizePhone } from "@/lib/sms";
 
-export async function sendWhatsApp(to: string, body: string) {
+const DEFAULT_WHATSAPP_TEMPLATE = "HXb5b62575e6e4ff6129ad7c8efe1f983e";
+
+export async function sendWhatsApp(to: string, dateSlot: string, timeSlot: string) {
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
   const from = process.env.WHATSAPP_FROM;
+  const contentSid = process.env.WHATSAPP_CONTENT_SID || DEFAULT_WHATSAPP_TEMPLATE;
   if (!sid || !token || !from) return false;
 
   const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
@@ -15,7 +18,8 @@ export async function sendWhatsApp(to: string, body: string) {
     body: new URLSearchParams({
       To: `whatsapp:${normalizePhone(to)}`,
       From: from.startsWith("whatsapp:") ? from : `whatsapp:${from}`,
-      Body: body,
+      ContentSid: contentSid,
+      ContentVariables: JSON.stringify({ "1": dateSlot, "2": timeSlot }),
     }),
   });
 
