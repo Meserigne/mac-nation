@@ -75,6 +75,7 @@ export default function BookingForm() {
   const [time, setTime] = useState("");
   const [place, setPlace] = useState<"salon" | "domicile">("salon");
   const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
   const [done, setDone] = useState<Confirmation | null>(null);
 
   const cells = useMemo(() => {
@@ -99,7 +100,7 @@ export default function BookingForm() {
     });
   }
 
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const data = new FormData(form);
@@ -118,8 +119,8 @@ export default function BookingForm() {
       return;
     }
 
-    setError("");
-    setDone({
+    const email = String(data.get("email") || "").trim();
+    const confirmation: Confirmation = {
       name,
       phone,
       service: `${service.name} · ${service.price}`,
@@ -127,10 +128,39 @@ export default function BookingForm() {
       time,
       place,
       address,
-    });
-    requestAnimationFrame(() => {
-      box.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
+    };
+
+    setError("");
+    setSending(true);
+    try {
+      const res = await fetch("/api/booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          phone,
+          email,
+          serviceId: service.id,
+          dateLabel: confirmation.dateLabel,
+          time,
+          place,
+          address,
+        }),
+      });
+      const json = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        showMessage(json?.error || "Impossible d'envoyer la demande. Réessayez.");
+        return;
+      }
+      setDone(confirmation);
+      requestAnimationFrame(() => {
+        box.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    } catch {
+      showMessage("Connexion interrompue. Vérifiez internet et réessayez.");
+    } finally {
+      setSending(false);
+    }
   }
 
   function reset() {
@@ -354,8 +384,12 @@ export default function BookingForm() {
             </p>
           ) : null}
 
-          <button type="submit" className="btn-gold h-12 cursor-pointer rounded-lg text-sm font-medium active:scale-[0.98]">
-            Confirmer le rendez-vous
+          <button
+            type="submit"
+            disabled={sending}
+            className="btn-gold h-12 cursor-pointer rounded-lg text-sm font-medium active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+          >
+            {sending ? "Envoi du SMS…" : "Confirmer le rendez-vous"}
           </button>
           <p className="text-xs text-gray-500">
             Salon : lun–sam 10h–21h, dim 12h–20h. À domicile : déplacement 2 000 F, Dakar uniquement.
