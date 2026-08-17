@@ -17,3 +17,7 @@ services:
         sync: false
       - key: BOOKING_SMS_TO
         sync: false
+      - key: WHATSAPP_FROM
+        sync: false
+      - key: BOOKING_EMAIL_TO
+        sync: false

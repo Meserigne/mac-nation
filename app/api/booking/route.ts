@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { services } from "@/lib/data";
 import { isSnMobile, sendSms, smsConfigured } from "@/lib/sms";
+import { sendBookingEmail, sendWhatsApp } from "@/lib/notify";
 
 type BookingBody = {
   name?: unknown;
@@ -58,24 +59,10 @@ export async function POST(request: Request) {
 
   const when = `${dateLabel} à ${time}`;
   const lieu = place === "domicile" ? `Domicile: ${address}` : "Salon Nord Foire";
-  const ownerMessage = [
-    "MAC NATION : nouveau RDV",
-    `${name} · ${phone}`,
-    email || null,
-    when,
-    service.name,
-    lieu,
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  const clientMessage = [
-    "MAC NATION : votre RDV",
-    name,
-    when,
-    service.name,
-    lieu,
-  ].join("\n");
+  const ownerLines = [`${name} · ${phone}`, email || "", when, service.name, lieu].filter(Boolean);
+  const clientLines = [name, when, service.name, lieu];
+  const ownerMessage = ["MAC NATION : nouveau RDV", ...ownerLines].join("\n");
+  const clientMessage = ["MAC NATION : votre RDV", ...clientLines].join("\n");
 
   try {
     await Promise.all([sendSms(owner, ownerMessage), sendSms(phone, clientMessage)]);
@@ -85,6 +72,17 @@ export async function POST(request: Request) {
       { status: 502 },
     );
   }
+
+  await Promise.allSettled([
+    sendWhatsApp(owner, ownerMessage),
+    sendWhatsApp(phone, clientMessage),
+    sendBookingEmail({
+      subject: "MAC NATION : nouveau RDV",
+      title: "MAC NATION : nouveau RDV",
+      lines: ownerLines,
+      clientEmail: email || undefined,
+    }),
+  ]);
 
   return NextResponse.json({ ok: true });
 }

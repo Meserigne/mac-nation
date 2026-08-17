@@ -23,6 +23,7 @@ const MONTHS = [
 type Confirmation = {
   name: string;
   phone: string;
+  email: string;
   service: string;
   dateLabel: string;
   time: string;
@@ -123,6 +124,7 @@ export default function BookingForm() {
     const confirmation: Confirmation = {
       name,
       phone,
+      email,
       service: `${service.name} · ${service.price}`,
       dateLabel: dateLabel(selected),
       time,
@@ -179,7 +181,8 @@ export default function BookingForm() {
           <div>
             <p className="font-bebas text-4xl text-white">Rendez-vous demandé</p>
             <p className="mt-2 text-sm text-gray-400">
-              Merci {done.name}. Un SMS a été envoyé au {done.phone}. Nous vous rappelons pour confirmer.
+              Merci {done.name}. Un SMS, un WhatsApp et un email de confirmation partent au {done.phone}
+              {done.email ? ` et ${done.email}` : ""}. Nous vous rappelons pour confirmer.
             </p>
           </div>
           <ul className="w-full space-y-3 border-y border-white/10 py-5 text-sm text-gray-200">
@@ -366,6 +369,7 @@ export default function BookingForm() {
               autoComplete="email"
               className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
             />
+            <span className="text-xs text-gray-500">Pour recevoir la confirmation par mail.</span>
           </label>
           {place === "domicile" ? (
             <label className="flex flex-col gap-2 text-sm text-gray-200">
