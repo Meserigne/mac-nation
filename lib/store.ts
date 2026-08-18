@@ -1,5 +1,8 @@
 import { createClient, type RedisClientType } from "redis";
+import { hashPin, pinOk } from "@/lib/client-auth";
+import { addDays, planPerks, pointsForAmount, REDEEM_FCFA, REDEEM_POINTS } from "@/lib/loyalty";
 import { bookingAmount, bookingLines, invoiceTotal, type ExpenseCategory, type InvoiceLine, type PaymentMethod } from "@/lib/money";
+import { normalizePhone } from "@/lib/sms";
 
 export type BookingStatus = "nouveau" | "confirme" | "termine" | "annule";
 export type PaymentStatus = "unpaid" | "pending" | "paid" | "refunded";
@@ -23,6 +26,7 @@ export type Booking = {
   amount: number;
   paymentStatus: PaymentStatus;
   invoiceId?: string;
+  clientId?: string;
 };
 
 export type Invoice = {
@@ -42,6 +46,8 @@ export type Invoice = {
   paydunyaUrl?: string;
   note?: string;
   kind?: InvoiceKind;
+  clientId?: string;
+  planId?: string;
 };
 
 export type Payment = {
@@ -83,12 +89,54 @@ export type Application = {
   status: ApplicationStatus;
 };
 
+export type MembershipStatus = "actif" | "expire" | "annule";
+
+export type Client = {
+  id: string;
+  createdAt: string;
+  name: string;
+  phone: string;
+  email: string;
+  pinHash: string;
+  points: number;
+  creditFcfa: number;
+};
+
+export type LoyaltyEvent = {
+  id: string;
+  createdAt: string;
+  clientId: string;
+  kind: "earn" | "redeem" | "adjust";
+  points: number;
+  creditFcfa: number;
+  label: string;
+  invoiceId?: string;
+};
+
+export type Membership = {
+  id: string;
+  createdAt: string;
+  clientId: string;
+  planId: string;
+  planName: string;
+  startedAt: string;
+  expiresAt: string;
+  visitsTotal: number;
+  visitsUsed: number;
+  boutiquePercent: number;
+  status: MembershipStatus;
+  invoiceId?: string;
+};
+
 export type SalonStore = {
   bookings: Booking[];
   invoices: Invoice[];
   payments: Payment[];
   expenses: Expense[];
   applications: Application[];
+  clients: Client[];
+  loyalty: LoyaltyEvent[];
+  memberships: Membership[];
   invoiceSeq: number;
 };
 
@@ -112,7 +160,17 @@ function scoreOf(booking: Pick<Booking, "dateIso" | "time">) {
 }
 
 function emptyStore(bookings: Booking[] = []): SalonStore {
-  return { bookings, invoices: [], payments: [], expenses: [], applications: [], invoiceSeq: 0 };
+  return {
+    bookings,
+    invoices: [],
+    payments: [],
+    expenses: [],
+    applications: [],
+    clients: [],
+    loyalty: [],
+    memberships: [],
+    invoiceSeq: 0,
+  };
 }
 
 function asBooking(raw: Partial<Booking>): Booking {
@@ -135,6 +193,7 @@ function asBooking(raw: Partial<Booking>): Booking {
     amount: typeof raw.amount === "number" ? raw.amount : bookingAmount(serviceId, place),
     paymentStatus: raw.paymentStatus || "unpaid",
     invoiceId: raw.invoiceId,
+    clientId: raw.clientId,
   };
 }
 
@@ -158,6 +217,19 @@ function asApplication(raw: Partial<Application>): Application {
   };
 }
 
+function asClient(raw: Partial<Client>): Client {
+  return {
+    id: raw.id || crypto.randomUUID(),
+    createdAt: raw.createdAt || new Date().toISOString(),
+    name: raw.name || "",
+    phone: raw.phone || "",
+    email: raw.email || "",
+    pinHash: raw.pinHash || "",
+    points: Number(raw.points) || 0,
+    creditFcfa: Number(raw.creditFcfa) || 0,
+  };
+}
+
 function asInvoice(raw: Partial<Invoice>): Invoice {
   const items = Array.isArray(raw.items) ? raw.items : [];
   return {
@@ -177,6 +249,8 @@ function asInvoice(raw: Partial<Invoice>): Invoice {
     paydunyaUrl: raw.paydunyaUrl,
     note: raw.note,
     kind: raw.kind || (raw.bookingId ? "rdv" : "caisse"),
+    clientId: raw.clientId,
+    planId: raw.planId,
   };
 }
 
@@ -189,6 +263,9 @@ function normalizeStore(raw: unknown): SalonStore {
     payments: Array.isArray(o.payments) ? o.payments : [],
     expenses: Array.isArray(o.expenses) ? o.expenses : [],
     applications: Array.isArray(o.applications) ? o.applications.map((row) => asApplication(row)) : [],
+    clients: Array.isArray(o.clients) ? o.clients.map((row) => asClient(row)) : [],
+    loyalty: Array.isArray(o.loyalty) ? o.loyalty : [],
+    memberships: Array.isArray(o.memberships) ? o.memberships : [],
     invoiceSeq: Number(o.invoiceSeq) || 0,
   };
   if (store.invoiceSeq === 0 && store.invoices.length > 0) store.invoiceSeq = store.invoices.length;
@@ -385,6 +462,154 @@ function nextInvoiceNumber(store: SalonStore) {
   return `FAC-${new Date().getFullYear()}-${String(store.invoiceSeq).padStart(4, "0")}`;
 }
 
+export type PublicClient = Omit<Client, "pinHash">;
+
+function publicClient(client: Client): PublicClient {
+  return {
+    id: client.id,
+    createdAt: client.createdAt,
+    name: client.name,
+    phone: client.phone,
+    email: client.email,
+    points: client.points,
+    creditFcfa: client.creditFcfa,
+  };
+}
+
+function samePhone(a: string, b: string) {
+  return Boolean(a && b && normalizePhone(a) === normalizePhone(b));
+}
+
+function ensureClientCollections(store: SalonStore) {
+  if (!store.clients) store.clients = [];
+  if (!store.loyalty) store.loyalty = [];
+  if (!store.memberships) store.memberships = [];
+}
+
+function findClient(store: SalonStore, clientId?: string, phone?: string) {
+  ensureClientCollections(store);
+  if (clientId) {
+    const byId = store.clients.find((item) => item.id === clientId);
+    if (byId) return byId;
+  }
+  if (phone) return store.clients.find((item) => samePhone(item.phone, phone)) || null;
+  return null;
+}
+
+function refreshMemberships(store: SalonStore) {
+  ensureClientCollections(store);
+  const now = Date.now();
+  for (const membership of store.memberships) {
+    if (membership.status === "actif" && new Date(membership.expiresAt).getTime() < now) {
+      membership.status = "expire";
+    }
+  }
+}
+
+function planIdFromInvoice(invoice: Invoice) {
+  if (invoice.planId) return invoice.planId;
+  const name = (invoice.items[0]?.name || "").toLowerCase();
+  if (name.includes("nation")) return "nation";
+  if (name.includes("essentiel")) return "essentiel";
+  if (name.includes("signature")) return "signature";
+  return "signature";
+}
+
+function activateMembership(store: SalonStore, client: Client, invoice: Invoice) {
+  if (store.memberships.some((item) => item.invoiceId === invoice.id)) return;
+  const planId = planIdFromInvoice(invoice);
+  const perks = planPerks(planId);
+  const now = new Date().toISOString();
+  for (const membership of store.memberships) {
+    if (membership.clientId === client.id && membership.status === "actif") membership.status = "expire";
+  }
+  store.memberships.push({
+    id: crypto.randomUUID(),
+    createdAt: now,
+    clientId: client.id,
+    planId,
+    planName: perks.name,
+    startedAt: now,
+    expiresAt: addDays(now, 30),
+    visitsTotal: perks.visits,
+    visitsUsed: 0,
+    boutiquePercent: perks.boutiquePercent,
+    status: "actif",
+    invoiceId: invoice.id,
+  });
+}
+
+function awardPaidInvoice(store: SalonStore, invoice: Invoice) {
+  const client = findClient(store, invoice.clientId, invoice.clientPhone);
+  if (!client) return;
+  invoice.clientId = client.id;
+  if (!store.loyalty.some((item) => item.invoiceId === invoice.id && item.kind === "earn")) {
+    const pts = pointsForAmount(invoice.amount);
+    if (pts > 0) {
+      client.points += pts;
+      store.loyalty.push({
+        id: crypto.randomUUID(),
+        createdAt: invoice.paidAt || new Date().toISOString(),
+        clientId: client.id,
+        kind: "earn",
+        points: pts,
+        creditFcfa: 0,
+        label: `Achat ${invoice.number}`,
+        invoiceId: invoice.id,
+      });
+    }
+  }
+  if (invoice.kind === "abonnement") activateMembership(store, client, invoice);
+}
+
+function consumeMembershipVisit(store: SalonStore, booking: Booking) {
+  const client = findClient(store, booking.clientId, booking.phone);
+  if (!client) return;
+  booking.clientId = client.id;
+  refreshMemberships(store);
+  const membership = store.memberships
+    .filter((item) => item.clientId === client.id && item.status === "actif" && item.visitsUsed < item.visitsTotal)
+    .sort((a, b) => b.expiresAt.localeCompare(a.expiresAt))[0];
+  if (!membership) return;
+  membership.visitsUsed += 1;
+}
+
+function linkClientHistory(store: SalonStore, client: Client) {
+  for (const booking of store.bookings) {
+    if (!booking.clientId && samePhone(booking.phone, client.phone)) booking.clientId = client.id;
+  }
+  for (const invoice of store.invoices) {
+    if (!invoice.clientId && samePhone(invoice.clientPhone, client.phone)) invoice.clientId = client.id;
+  }
+  const monthAgo = Date.now() - 1000 * 60 * 60 * 24 * 30;
+  const paid = store.invoices
+    .filter((item) => item.clientId === client.id && item.status === "payee")
+    .sort((a, b) => (a.paidAt || a.createdAt).localeCompare(b.paidAt || b.createdAt));
+  for (const invoice of paid) {
+    const paidAt = new Date(invoice.paidAt || invoice.createdAt).getTime();
+    if (invoice.kind === "abonnement" && paidAt < monthAgo) {
+      if (!store.loyalty.some((item) => item.invoiceId === invoice.id && item.kind === "earn")) {
+        const pts = pointsForAmount(invoice.amount);
+        if (pts > 0) {
+          client.points += pts;
+          store.loyalty.push({
+            id: crypto.randomUUID(),
+            createdAt: invoice.paidAt || invoice.createdAt,
+            clientId: client.id,
+            kind: "earn",
+            points: pts,
+            creditFcfa: 0,
+            label: `Achat ${invoice.number}`,
+            invoiceId: invoice.id,
+          });
+        }
+      }
+      continue;
+    }
+    awardPaidInvoice(store, invoice);
+  }
+}
+
 function makeInvoice(store: SalonStore, input: {
   bookingId?: string;
   clientName: string;
@@ -394,9 +619,12 @@ function makeInvoice(store: SalonStore, input: {
   note?: string;
   status?: InvoiceStatus;
   kind?: InvoiceKind;
+  clientId?: string;
+  planId?: string;
 }): Invoice {
   const items = input.items.filter((line) => line.name.trim() && line.qty > 0);
   const amount = invoiceTotal(items);
+  const client = findClient(store, input.clientId, input.clientPhone);
   return {
     id: crypto.randomUUID(),
     number: nextInvoiceNumber(store),
@@ -410,6 +638,8 @@ function makeInvoice(store: SalonStore, input: {
     status: input.status || (amount > 0 ? "envoyee" : "brouillon"),
     note: input.note,
     kind: input.kind || (input.bookingId ? "rdv" : "caisse"),
+    clientId: client?.id || input.clientId,
+    planId: input.planId,
   };
 }
 
@@ -420,6 +650,8 @@ export function buildWalkInInvoice(input: {
   items: InvoiceLine[];
   note?: string;
   kind?: InvoiceKind;
+  clientId?: string;
+  planId?: string;
 }): Invoice {
   const items = input.items.filter((line) => line.name.trim() && line.qty > 0);
   return {
@@ -434,6 +666,8 @@ export function buildWalkInInvoice(input: {
     status: "envoyee",
     note: input.note,
     kind: input.kind || "caisse",
+    clientId: input.clientId,
+    planId: input.planId,
   };
 }
 
@@ -456,6 +690,7 @@ export async function createBooking(input: Omit<Booking, "id" | "createdAt" | "s
       items: bookingLines(booking.serviceName, booking.serviceId, booking.place),
       note: `${booking.dateLabel} · ${booking.time} · ${booking.place === "domicile" ? booking.address : "Salon Nord Foire"}`,
       kind: "rdv",
+      clientId: booking.clientId,
     });
     booking.invoiceId = invoice.id;
     booking.amount = invoice.amount;
@@ -475,6 +710,7 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
     const booking = store.bookings.find((item) => item.id === id);
     if (!booking) return null;
     booking.status = status;
+    if (status === "termine") consumeMembershipVisit(store, booking);
     if (status === "annule" && booking.invoiceId) {
       const invoice = store.invoices.find((item) => item.id === booking.invoiceId);
       if (invoice && invoice.status !== "payee") invoice.status = "annulee";
@@ -502,6 +738,7 @@ export async function invoiceForBooking(bookingId: string) {
       items: bookingLines(booking.serviceName, booking.serviceId, booking.place),
       note: `${booking.dateLabel} · ${booking.time}`,
       kind: "rdv",
+      clientId: booking.clientId,
     });
     booking.invoiceId = invoice.id;
     booking.amount = invoice.amount;
@@ -517,6 +754,8 @@ export async function createWalkInInvoice(input: {
   items: InvoiceLine[];
   note?: string;
   kind?: InvoiceKind;
+  clientId?: string;
+  planId?: string;
 }) {
   return mutateStore((store) => {
     const invoice = makeInvoice(store, {
@@ -526,6 +765,8 @@ export async function createWalkInInvoice(input: {
       items: input.items,
       note: input.note,
       kind: input.kind,
+      clientId: input.clientId,
+      planId: input.planId,
     });
     store.invoices.push(invoice);
     return invoice;
@@ -604,6 +845,8 @@ export async function markInvoicePaid(opts: {
         status: "envoyee",
         kind: snap.kind,
         note: snap.note,
+        clientId: snap.clientId,
+        planId: snap.planId,
       };
       store.invoices.push(invoice);
     }
@@ -635,6 +878,7 @@ export async function markInvoicePaid(opts: {
       const booking = store.bookings.find((item) => item.id === invoice.bookingId);
       if (booking) booking.paymentStatus = "paid";
     }
+    awardPaidInvoice(store, invoice);
     return { invoice, payment, created: true };
   });
 }
@@ -782,13 +1026,142 @@ export async function updateApplicationStatus(id: string, status: ApplicationSta
   });
 }
 
+export async function cancelClientMembership(clientId: string) {
+  return mutateStore((store) => {
+    refreshMemberships(store);
+    const membership = store.memberships.find((item) => item.clientId === clientId && item.status === "actif");
+    if (!membership) return null;
+    membership.status = "annule";
+    return membership;
+  });
+}
+
 export async function getSalon() {
   const store = await loadStore();
+  refreshMemberships(store);
   return {
     bookings: store.bookings.slice().sort((a, b) => scoreOf(a) - scoreOf(b) || a.createdAt.localeCompare(b.createdAt)),
     invoices: store.invoices.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     payments: store.payments.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     expenses: store.expenses.slice().sort((a, b) => b.dateIso.localeCompare(a.dateIso) || b.createdAt.localeCompare(a.createdAt)),
     applications: (store.applications || []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    clients: (store.clients || []).map(publicClient).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    memberships: (store.memberships || []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
   };
+}
+
+export async function registerClient(input: { name: string; phone: string; email: string; pin: string }) {
+  return mutateStore((store) => {
+    ensureClientCollections(store);
+    const phone = normalizePhone(input.phone);
+    if (store.clients.some((item) => samePhone(item.phone, phone))) throw new Error("PHONE_TAKEN");
+    const client: Client = {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      name: input.name.trim(),
+      phone,
+      email: input.email.trim(),
+      pinHash: hashPin(input.pin),
+      points: 0,
+      creditFcfa: 0,
+    };
+    store.clients.push(client);
+    linkClientHistory(store, client);
+    return publicClient(client);
+  });
+}
+
+export async function loginClient(phone: string, pin: string) {
+  const store = await loadStore();
+  const client = findClient(store, undefined, phone);
+  if (!client || !client.pinHash || !pinOk(pin, client.pinHash)) return null;
+  return publicClient(client);
+}
+
+export async function getClientSession(clientId: string) {
+  const store = await loadStore();
+  const client = findClient(store, clientId);
+  return client ? publicClient(client) : null;
+}
+
+export async function getClientDashboard(clientId: string) {
+  const store = await loadStore();
+  const client = findClient(store, clientId);
+  if (!client) return null;
+  refreshMemberships(store);
+  const memberships = store.memberships
+    .filter((item) => item.clientId === client.id)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const membership = memberships.find((item) => item.status === "actif") || null;
+  return {
+    client: publicClient(client),
+    membership,
+    memberships,
+    loyalty: store.loyalty
+      .filter((item) => item.clientId === client.id)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, 30),
+    bookings: store.bookings
+      .filter((item) => item.clientId === client.id || samePhone(item.phone, client.phone))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    invoices: store.invoices
+      .filter((item) => item.clientId === client.id || samePhone(item.clientPhone, client.phone))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    redeemPoints: REDEEM_POINTS,
+    redeemFcfa: REDEEM_FCFA,
+  };
+}
+
+export async function updateClientProfile(clientId: string, patch: { name?: string; email?: string; pin?: string }) {
+  return mutateStore((store) => {
+    const client = findClient(store, clientId);
+    if (!client) return null;
+    if (patch.name !== undefined) client.name = patch.name.trim();
+    if (patch.email !== undefined) client.email = patch.email.trim();
+    if (patch.pin) client.pinHash = hashPin(patch.pin);
+    return publicClient(client);
+  });
+}
+
+export async function redeemClientPoints(clientId: string) {
+  return mutateStore((store) => {
+    const client = findClient(store, clientId);
+    if (!client) return null;
+    if (client.points < REDEEM_POINTS) throw new Error("POINTS_LOW");
+    client.points -= REDEEM_POINTS;
+    client.creditFcfa += REDEEM_FCFA;
+    store.loyalty.push({
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      clientId: client.id,
+      kind: "redeem",
+      points: -REDEEM_POINTS,
+      creditFcfa: REDEEM_FCFA,
+      label: `Échange ${REDEEM_POINTS} pts · ${REDEEM_FCFA} F de crédit`,
+    });
+    return publicClient(client);
+  });
+}
+
+export async function adjustClient(clientId: string, patch: { pointsDelta?: number; creditDelta?: number; note?: string }) {
+  return mutateStore((store) => {
+    const client = findClient(store, clientId);
+    if (!client) return null;
+    const pointsDelta = Number(patch.pointsDelta) || 0;
+    const creditDelta = Number(patch.creditDelta) || 0;
+    client.points = Math.max(0, client.points + pointsDelta);
+    client.creditFcfa = Math.max(0, client.creditFcfa + creditDelta);
+    if (pointsDelta || creditDelta) {
+      store.loyalty.push({
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        clientId: client.id,
+        kind: "adjust",
+        points: pointsDelta,
+        creditFcfa: creditDelta,
+        label: patch.note?.trim() || "Ajustement salon",
+      });
+    }
+    return publicClient(client);
+  });
 }

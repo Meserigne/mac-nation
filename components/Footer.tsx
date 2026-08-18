@@ -6,6 +6,7 @@ const SALON_LINKS = [
   { href: "/rendez-vous", label: "Réserver" },
   { href: "/boutique", label: "Boutique" },
   { href: "/abonnements", label: "Abonnements" },
+  { href: "/compte", label: "Mon compte" },
   { href: "/contact", label: "Contact" },
   { href: "/career", label: "Carrières" },
 ] as const;

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getSessionClientId } from "@/lib/client-auth";
 import { plans, products } from "@/lib/data";
 import { parseFcfa } from "@/lib/money";
 import { isSnMobile, sendSms, smsConfigured } from "@/lib/sms";
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Montant à confirmer au salon." }, { status: 400 });
   }
 
+  const clientId = await getSessionClientId();
   const draft = {
     clientName: name,
     clientPhone: phone,
@@ -72,6 +74,8 @@ export async function POST(request: Request) {
     items: [{ name: lineName, qty: invoiceKind === "abonnement" ? 1 : qty, unitPrice }],
     note,
     kind: invoiceKind,
+    clientId: clientId || undefined,
+    planId: invoiceKind === "abonnement" ? itemId : undefined,
   };
 
   try {

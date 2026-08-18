@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { formatFcfa } from "@/lib/money";
 import SoftPay from "@/components/SoftPay";
 
@@ -13,12 +13,26 @@ type Props = {
   hint: string;
 };
 
+type Prefill = { name: string; phone: string; email: string };
+
 export default function CheckoutForm({ kind, itemId, title, amount, showQty, hint }: Props) {
   const [qty, setQty] = useState(1);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+  const [prefill, setPrefill] = useState<Prefill>({ name: "", phone: "", email: "" });
   const [pay, setPay] = useState<{ invoiceId: string; amount: number; name: string; phone: string; email: string } | null>(null);
   const total = amount * (showQty ? qty : 1);
+
+  useEffect(() => {
+    fetch("/api/compte/session", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((json: Partial<Prefill>) => {
+        if (json.name || json.phone) {
+          setPrefill({ name: json.name || "", phone: json.phone || "", email: json.email || "" });
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -84,15 +98,37 @@ export default function CheckoutForm({ kind, itemId, title, amount, showQty, hin
           ) : null}
           <label className="mt-5 flex flex-col gap-2 text-sm text-gray-200">
             Nom complet *
-            <input name="name" autoComplete="name" required className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50" />
+            <input
+              name="name"
+              autoComplete="name"
+              defaultValue={prefill.name}
+              key={`name-${prefill.name}`}
+              required
+              className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
+            />
           </label>
           <label className="mt-5 flex flex-col gap-2 text-sm text-gray-200">
             Téléphone *
-            <input name="phone" type="tel" autoComplete="tel" required className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50" />
+            <input
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              defaultValue={prefill.phone}
+              key={`phone-${prefill.phone}`}
+              required
+              className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
+            />
           </label>
           <label className="mt-5 flex flex-col gap-2 text-sm text-gray-200">
             Email
-            <input name="email" type="email" autoComplete="email" className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50" />
+            <input
+              name="email"
+              type="email"
+              autoComplete="email"
+              defaultValue={prefill.email}
+              key={`email-${prefill.email}`}
+              className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
+            />
           </label>
           {error ? <p className="mt-4 rounded-lg bg-red-500/15 px-4 py-3 text-sm text-red-300">{error}</p> : null}
           <button type="submit" disabled={sending} className="btn-gold mt-6 h-12 w-full cursor-pointer rounded-lg text-sm font-medium disabled:opacity-70">

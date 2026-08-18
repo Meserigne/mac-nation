@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { CaretLeft, CaretRight, CheckCircle } from "@phosphor-icons/react";
 import { services } from "@/lib/data";
 import { formatFcfa } from "@/lib/money";
@@ -83,6 +83,18 @@ export default function BookingForm() {
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState<Confirmation | null>(null);
   const [payNow, setPayNow] = useState(true);
+  const [prefill, setPrefill] = useState({ name: "", phone: "", email: "" });
+
+  useEffect(() => {
+    fetch("/api/compte/session", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((json: { name?: string; phone?: string; email?: string }) => {
+        if (json.name || json.phone) {
+          setPrefill({ name: json.name || "", phone: json.phone || "", email: json.email || "" });
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   const cells = useMemo(() => {
     const year = cursor.getFullYear();
@@ -395,6 +407,8 @@ export default function BookingForm() {
             <input
               name="name"
               autoComplete="name"
+              defaultValue={prefill.name}
+              key={`name-${prefill.name}`}
               className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
             />
           </label>
@@ -404,6 +418,8 @@ export default function BookingForm() {
               name="phone"
               type="tel"
               autoComplete="tel"
+              defaultValue={prefill.phone}
+              key={`phone-${prefill.phone}`}
               className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
             />
           </label>
@@ -414,6 +430,8 @@ export default function BookingForm() {
               type="text"
               inputMode="email"
               autoComplete="email"
+              defaultValue={prefill.email}
+              key={`email-${prefill.email}`}
               className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
             />
             <span className="text-xs text-gray-500">Pour recevoir la confirmation par mail.</span>

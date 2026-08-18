@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { List, X } from "@phosphor-icons/react";
 import { navLinks } from "@/lib/assets";
+import AccountNav from "@/components/AccountNav";
 
 export default function Header() {
   const pathname = usePathname();
@@ -59,6 +60,9 @@ export default function Header() {
               );
             })}
           </ul>
+          <li className="relative hidden sm:block">
+            <AccountNav className="whitespace-nowrap p-3 text-sm tracking-wide text-gray-300/50 transition-all duration-300 hover:scale-[1.03] hover:text-gray-200" />
+          </li>
           <li className="relative">
             <Link
               href="/rendez-vous"
@@ -91,6 +95,9 @@ export default function Header() {
                 </Link>
               </li>
             ))}
+            <li>
+              <AccountNav className="block rounded-lg px-3 py-3 text-sm text-gray-200 transition-colors hover:bg-white/5" />
+            </li>
           </ul>
         ) : null}
       </nav>

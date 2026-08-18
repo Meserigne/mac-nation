@@ -199,6 +199,8 @@ export const plans = [
     period: "par mois",
     highlight: false,
     points: ["2 coupes par mois", "Priorité sur les créneaux du soir", "10% sur la boutique"],
+    visits: 2,
+    boutiquePercent: 10,
   },
   {
     id: "signature",
@@ -207,6 +209,8 @@ export const plans = [
     period: "par mois",
     highlight: true,
     points: ["4 visites coupe + barbe", "Diagnostic à chaque passage", "15% sur la boutique", "Rappel WhatsApp J-1"],
+    visits: 4,
+    boutiquePercent: 15,
   },
   {
     id: "nation",
@@ -220,6 +224,8 @@ export const plans = [
       "20% sur la boutique",
       "Invité : 1 coupe offerte par trimestre",
     ],
+    visits: 4,
+    boutiquePercent: 20,
   },
 ];
 

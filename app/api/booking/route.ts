@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getSessionClientId } from "@/lib/client-auth";
 import { services } from "@/lib/data";
 import { isSnMobile, sendSms, smsConfigured } from "@/lib/sms";
 import { sendBookingEmail, sendWhatsApp } from "@/lib/notify";
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
     );
   }
 
+  const clientId = await getSessionClientId();
   const when = `${dateLabel} à ${time}`;
   const lieu = place === "domicile" ? `Domicile: ${address}` : "Salon Nord Foire";
   const ownerLines = [`${name} · ${phone}`, email || "", when, service.name, lieu].filter(Boolean);
@@ -86,6 +88,7 @@ export async function POST(request: Request) {
         time,
         place,
         address,
+        clientId: clientId || undefined,
       });
       invoiceId = booking.invoiceId || "";
       amount = booking.amount;
