@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Conditions générales de vente" };
 
 export default function CgvPage() {
   return (
-    <LegalArticle title="CGV" subtitle="Conditions générales de vente — salon, boutique et abonnements.">
+    <LegalArticle title="CGV" subtitle="Conditions générales de vente. Salon, boutique et abonnements.">
       <h2>Champ d&apos;application</h2>
       <p>
         Les présentes CGV s&apos;appliquent aux prestations de coiffure, à la boutique capillaire et aux abonnements vendus

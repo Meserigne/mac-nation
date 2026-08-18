@@ -16,7 +16,7 @@ export default function EnvoisPage() {
       <h2>Pas de livraison colis</h2>
       <p>
         MAC NATION n&apos;expédie pas de colis pour le moment. Pas de frais de port : tu récupères au salon pendant les
-        horaires d&apos;ouverture (lun–sam 10h–21h, dim 12h–20h).
+        horaires d&apos;ouverture (lun-sam 10h-21h, dim 12h-20h).
       </p>
       <h2>Prestation à domicile</h2>
       <p>

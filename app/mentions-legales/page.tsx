@@ -14,7 +14,7 @@ export default function MentionsLegalesPage() {
         Dakar, Sénégal.
       </p>
       <p>
-        Horaires : lundi–samedi 10h–21h, dimanche 12h–20h. Pour toute question :{" "}
+        Horaires : lundi au samedi 10h-21h, dimanche 12h-20h. Pour toute question :{" "}
         <Link href="/contact">page Contact</Link> ou au salon.
       </p>
       <h2>Objet du site</h2>
