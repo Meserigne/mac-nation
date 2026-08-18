@@ -204,6 +204,18 @@ select {
   font: inherit;
 }
 
+.legal h2 {
+  font-family: var(--font-bebas);
+  color: #fff;
+  font-size: 1.75rem;
+  letter-spacing: 0.02em;
+  padding-top: 1.25rem;
+}
+
+.legal a {
+  color: #c4a574;
+}
+
 @media print {
   .no-print,
   header {

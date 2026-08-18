@@ -1,22 +1,42 @@
 import type { Metadata } from "next";
-import PageHero from "@/components/PageHero";
+import Link from "next/link";
+import LegalArticle from "@/components/LegalArticle";
 
 export const metadata: Metadata = { title: "Politique de confidentialité" };
 
 export default function PrivacyPage() {
   return (
-    <main>
-      <PageHero title="Politique de confidentialité" />
-      <article className="mx-auto max-w-[720px] space-y-5 px-6 pb-28 text-sm leading-relaxed text-gray-400">
-        <p>
-          MAC NATION traite les informations que vous nous confiez pour répondre à une réservation, une commande
-          boutique, un abonnement ou une candidature.
-        </p>
-        <p>
-          Le formulaire de ce site est une démonstration locale : les messages ne sont pas envoyés vers un serveur
-          tant que le canal officiel n&apos;est pas branché.
-        </p>
-      </article>
-    </main>
+    <LegalArticle title="Politique de confidentialité" subtitle="Comment MAC NATION utilise tes informations.">
+      <p>
+        MAC NATION traite les données nécessaires pour une réservation, une commande boutique, un abonnement, un paiement
+        ou une candidature. En utilisant le site, tu acceptes cette politique.
+      </p>
+      <h2>Données collectées</h2>
+      <p>
+        Nom, téléphone, email, adresse (prestation à domicile), créneau de rendez-vous, détails de commande, informations
+        de paiement transmises à PayDunya, et, pour les candidatures, CV et lettre de motivation.
+      </p>
+      <h2>Utilisation</h2>
+      <p>
+        Confirmer un RDV, préparer une commande, encaisser un paiement, répondre à une candidature, t&apos;envoyer un SMS,
+        un WhatsApp ou un email de confirmation, et tenir la caisse du salon.
+      </p>
+      <h2>Partage</h2>
+      <p>
+        Tes données ne sont pas vendues. Elles peuvent être transmises à PayDunya pour le paiement, à Twilio pour le SMS /
+        WhatsApp, et à notre hébergeur. Les dossiers de candidature sont consultables dans le backoffice du salon.
+      </p>
+      <h2>Durée et droits</h2>
+      <p>
+        Les données de rendez-vous et de caisse sont conservées le temps de la relation commerciale et des obligations
+        comptables. Pour accéder, corriger ou supprimer tes informations, écris-nous via la{" "}
+        <Link href="/contact">page Contact</Link> ou au salon Nord Foire.
+      </p>
+      <h2>Cookies</h2>
+      <p>
+        Le site utilise un cookie de session pour l&apos;accès au backoffice. Aucune publicité tierce n&apos;est déposée par MAC
+        NATION.
+      </p>
+    </LegalArticle>
   );
 }
