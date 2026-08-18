@@ -29,7 +29,7 @@ export default function Footer() {
           <div className="flex-1" />
           <nav className="flex items-center gap-10">
             <Link className="text-sm text-gray-400 hover:text-white" href="/rendez-vous">
-              Payer un RDV
+              Réserver
             </Link>
             <Link className="text-sm text-gray-400 hover:text-white" href="/boutique">
               Boutique
@@ -55,7 +55,7 @@ export default function Footer() {
           <p className="text-center text-gray-400">Copyright © 2026 MAC NATION Dakar</p>
           <nav className="flex flex-wrap items-center justify-center gap-6">
             <Link className="text-sm text-gray-400 hover:text-white" href="/rendez-vous">
-              Payer un RDV
+              Réserver
             </Link>
             <Link className="text-sm text-gray-400 hover:text-white" href="/boutique">
               Boutique

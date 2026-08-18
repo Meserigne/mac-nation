@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import PageHero from "@/components/PageHero";
-import PayBar from "@/components/PayBar";
 import Reveal from "@/components/Reveal";
 import { products } from "@/lib/data";
 import { pageImages, people, photos } from "@/lib/assets";
@@ -20,7 +19,6 @@ export default function BoutiquePage() {
         subtitle="Payer par Wave, Orange Money ou Free Money. Tu récupères au salon, Nord Foire."
         image={pageImages.boutique}
       />
-      <PayBar />
       <section className="mx-auto grid max-w-[1100px] grid-cols-1 gap-6 px-6 pb-12 sm:grid-cols-2 lg:grid-cols-3">
         {products.map((p, i) => (
           <Reveal key={p.id} delay={i * 0.05}>

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import PageHero from "@/components/PageHero";
-import PayBar from "@/components/PayBar";
 import Reveal from "@/components/Reveal";
 import { plans } from "@/lib/data";
 import { pageImages, people, photos } from "@/lib/assets";
@@ -20,7 +19,6 @@ export default function AbonnementsPage() {
         subtitle="Payer en ligne par Wave, Orange Money ou Free Money. Valable uniquement à Nord Foire."
         image={pageImages.abonnements}
       />
-      <PayBar />
       <section className="mx-auto grid max-w-[1100px] grid-cols-1 gap-6 px-6 pb-12 md:grid-cols-3">
         {plans.map((plan, i) => (
           <Reveal key={plan.id} delay={i * 0.06}>
