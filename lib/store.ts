@@ -100,6 +100,9 @@ export type Client = {
   pinHash: string;
   points: number;
   creditFcfa: number;
+  googleId?: string;
+  appleId?: string;
+  facebookId?: string;
 };
 
 export type LoyaltyEvent = {
@@ -227,6 +230,9 @@ function asClient(raw: Partial<Client>): Client {
     pinHash: raw.pinHash || "",
     points: Number(raw.points) || 0,
     creditFcfa: Number(raw.creditFcfa) || 0,
+    googleId: raw.googleId,
+    appleId: raw.appleId,
+    facebookId: raw.facebookId,
   };
 }
 
@@ -462,9 +468,17 @@ function nextInvoiceNumber(store: SalonStore) {
   return `FAC-${new Date().getFullYear()}-${String(store.invoiceSeq).padStart(4, "0")}`;
 }
 
-export type PublicClient = Omit<Client, "pinHash">;
+export type OauthProvider = "google" | "apple" | "facebook";
+
+export type PublicClient = Omit<Client, "pinHash" | "googleId" | "appleId" | "facebookId"> & {
+  providers: OauthProvider[];
+};
 
 function publicClient(client: Client): PublicClient {
+  const providers: OauthProvider[] = [];
+  if (client.googleId) providers.push("google");
+  if (client.appleId) providers.push("apple");
+  if (client.facebookId) providers.push("facebook");
   return {
     id: client.id,
     createdAt: client.createdAt,
@@ -473,6 +487,7 @@ function publicClient(client: Client): PublicClient {
     email: client.email,
     points: client.points,
     creditFcfa: client.creditFcfa,
+    providers,
   };
 }
 
@@ -1112,13 +1127,59 @@ export async function getClientDashboard(clientId: string) {
   };
 }
 
-export async function updateClientProfile(clientId: string, patch: { name?: string; email?: string; pin?: string }) {
+export async function updateClientProfile(
+  clientId: string,
+  patch: { name?: string; email?: string; pin?: string; phone?: string },
+) {
   return mutateStore((store) => {
     const client = findClient(store, clientId);
     if (!client) return null;
     if (patch.name !== undefined) client.name = patch.name.trim();
     if (patch.email !== undefined) client.email = patch.email.trim();
     if (patch.pin) client.pinHash = hashPin(patch.pin);
+    if (patch.phone !== undefined) {
+      const phone = patch.phone.trim() ? normalizePhone(patch.phone) : "";
+      if (phone && store.clients.some((item) => item.id !== client.id && samePhone(item.phone, phone))) {
+        throw new Error("PHONE_TAKEN");
+      }
+      client.phone = phone;
+      if (phone) linkClientHistory(store, client);
+    }
+    return publicClient(client);
+  });
+}
+
+export async function loginOrRegisterOAuth(input: {
+  provider: OauthProvider;
+  providerId: string;
+  email: string;
+  name: string;
+}) {
+  return mutateStore((store) => {
+    ensureClientCollections(store);
+    const key = input.provider === "google" ? "googleId" : input.provider === "apple" ? "appleId" : "facebookId";
+    const email = input.email.trim().toLowerCase();
+    let client =
+      store.clients.find((item) => item[key] === input.providerId) ||
+      (email ? store.clients.find((item) => item.email.trim().toLowerCase() === email) : undefined);
+    if (!client) {
+      client = {
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        name: input.name.trim() || "Client MAC NATION",
+        phone: "",
+        email: input.email.trim(),
+        pinHash: "",
+        points: 0,
+        creditFcfa: 0,
+        [key]: input.providerId,
+      };
+      store.clients.push(client);
+    } else {
+      client[key] = input.providerId;
+      if (input.name.trim() && (!client.name || client.name === "Client MAC NATION")) client.name = input.name.trim();
+      if (input.email.trim() && !client.email) client.email = input.email.trim();
+    }
     return publicClient(client);
   });
 }

@@ -107,6 +107,7 @@ export default function ComptePage() {
         body: JSON.stringify({
           name: String(payload.get("name") || "").trim(),
           email: String(payload.get("email") || "").trim(),
+          phone: String(payload.get("phone") || "").trim(),
           pin: String(payload.get("pin") || "").trim(),
         }),
       });
@@ -144,12 +145,18 @@ export default function ComptePage() {
         <div>
           <p className="text-xs tracking-[0.22em] text-[#c4a574]">ESPACE CLIENT</p>
           <h1 className="font-bebas mt-2 text-5xl text-white sm:text-6xl">Salut {client.name.split(" ")[0]}</h1>
-          <p className="mt-2 text-sm text-gray-400">{client.phone}</p>
+          <p className="mt-2 text-sm text-gray-400">{client.phone || client.email}</p>
         </div>
         <button type="button" onClick={() => void logout()} className="cursor-pointer text-sm text-gray-500 hover:text-white">
           Déconnexion
         </button>
       </div>
+
+      {!client.phone ? (
+        <p className="mt-6 rounded-lg bg-[#c4a574]/15 px-4 py-3 text-sm text-[#c4a574]">
+          Ajoute ton numéro dans le profil pour lier tes rendez-vous et tes points.
+        </p>
+      ) : null}
 
       {error ? <p className="mt-6 rounded-lg bg-red-500/15 px-4 py-3 text-sm text-red-300">{error}</p> : null}
 
@@ -284,6 +291,11 @@ export default function ComptePage() {
 
       <section className="mt-12 rounded-2xl bg-gray-950 p-6 ring-1 ring-white/10 sm:p-8">
         <h2 className="font-bebas text-3xl text-white">Profil</h2>
+        {client.providers.length > 0 ? (
+          <p className="mt-2 text-sm text-gray-500">
+            Connecté avec {client.providers.map((item) => (item === "google" ? "Google" : item === "apple" ? "Apple" : "Facebook")).join(", ")}.
+          </p>
+        ) : null}
         <form onSubmit={saveProfile} className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
           <label className="flex flex-col gap-2 text-sm text-gray-200">
             Nom
@@ -293,6 +305,17 @@ export default function ComptePage() {
               key={client.name}
               required
               className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-sm text-gray-200">
+            Téléphone
+            <input
+              name="phone"
+              type="tel"
+              defaultValue={client.phone}
+              key={client.phone}
+              placeholder="77 123 45 67"
+              className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 placeholder:text-gray-600 focus:ring-[#c4a574]/50"
             />
           </label>
           <label className="flex flex-col gap-2 text-sm text-gray-200">

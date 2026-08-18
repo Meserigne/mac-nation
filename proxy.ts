@@ -9,6 +9,8 @@ const COMPTE_PUBLIC = new Set([
   "/api/compte/register",
   "/api/compte/session",
   "/api/compte/logout",
+  "/api/compte/oauth",
+  "/api/compte/oauth/config",
 ]);
 
 export function proxy(request: NextRequest) {

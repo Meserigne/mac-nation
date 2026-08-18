@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import SocialLogin from "@/components/SocialLogin";
 
 export default function CompteLoginPage() {
   const router = useRouter();
@@ -50,6 +51,13 @@ export default function CompteLoginPage() {
         <p className="mt-2 text-sm text-gray-500">
           Points de fidélité, abonnements, rendez-vous et achats au même endroit.
         </p>
+        <SocialLogin onError={setError} onBusy={setSending} />
+        {error ? <p className="mt-3 text-sm text-red-400">{error}</p> : null}
+        <div className="mt-6 flex items-center gap-3">
+          <span className="h-px flex-1 bg-white/10" />
+          <span className="text-[11px] tracking-[0.18em] text-gray-600">OU AVEC TON TÉLÉPHONE</span>
+          <span className="h-px flex-1 bg-white/10" />
+        </div>
         <div className="mt-6 grid grid-cols-2 gap-2">
           <button
             type="button"
