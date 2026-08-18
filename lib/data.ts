@@ -238,6 +238,7 @@ export const timeline = [
 
 export const jobs = [
   {
+    id: "barber",
     track: "Barber",
     title: "Barber / Coiffeur barbier",
     location: "Nord Foire, Dakar",
@@ -245,6 +246,7 @@ export const jobs = [
     blurb: "Maîtrise de tous types de cheveux, culture du diagnostic, exigence du geste. On forme, on exige, on avance ensemble.",
   },
   {
+    id: "barber-senior",
     track: "Barber",
     title: "Barber senior",
     location: "Nord Foire, Dakar",
@@ -252,6 +254,7 @@ export const jobs = [
     blurb: "Prendre le lead sur le plateau, transmettre les standards, garder le niveau à chaque chaise.",
   },
   {
+    id: "accueil",
     track: "Accueil",
     title: "Hôte / Hôtesse d'accueil",
     location: "Nord Foire, Dakar",

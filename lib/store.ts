@@ -65,11 +65,30 @@ export type Expense = {
   note: string;
 };
 
+export type ApplicationStatus = "nouvelle" | "vue" | "retenue" | "refusee";
+
+export type Application = {
+  id: string;
+  createdAt: string;
+  jobId: string;
+  jobTitle: string;
+  name: string;
+  phone: string;
+  email: string;
+  letter: string;
+  cvName: string;
+  cvPath: string;
+  letterName?: string;
+  letterPath?: string;
+  status: ApplicationStatus;
+};
+
 export type SalonStore = {
   bookings: Booking[];
   invoices: Invoice[];
   payments: Payment[];
   expenses: Expense[];
+  applications: Application[];
   invoiceSeq: number;
 };
 
@@ -93,7 +112,7 @@ function scoreOf(booking: Pick<Booking, "dateIso" | "time">) {
 }
 
 function emptyStore(bookings: Booking[] = []): SalonStore {
-  return { bookings, invoices: [], payments: [], expenses: [], invoiceSeq: 0 };
+  return { bookings, invoices: [], payments: [], expenses: [], applications: [], invoiceSeq: 0 };
 }
 
 function asBooking(raw: Partial<Booking>): Booking {
@@ -116,6 +135,26 @@ function asBooking(raw: Partial<Booking>): Booking {
     amount: typeof raw.amount === "number" ? raw.amount : bookingAmount(serviceId, place),
     paymentStatus: raw.paymentStatus || "unpaid",
     invoiceId: raw.invoiceId,
+  };
+}
+
+function asApplication(raw: Partial<Application>): Application {
+  const status: ApplicationStatus =
+    raw.status === "vue" || raw.status === "retenue" || raw.status === "refusee" ? raw.status : "nouvelle";
+  return {
+    id: raw.id || crypto.randomUUID(),
+    createdAt: raw.createdAt || new Date().toISOString(),
+    jobId: raw.jobId || "",
+    jobTitle: raw.jobTitle || "",
+    name: raw.name || "",
+    phone: raw.phone || "",
+    email: raw.email || "",
+    letter: raw.letter || "",
+    cvName: raw.cvName || "cv.pdf",
+    cvPath: raw.cvPath || "",
+    letterName: raw.letterName,
+    letterPath: raw.letterPath,
+    status,
   };
 }
 
@@ -149,6 +188,7 @@ function normalizeStore(raw: unknown): SalonStore {
     invoices: Array.isArray(o.invoices) ? o.invoices.map((row) => asInvoice(row)) : [],
     payments: Array.isArray(o.payments) ? o.payments : [],
     expenses: Array.isArray(o.expenses) ? o.expenses : [],
+    applications: Array.isArray(o.applications) ? o.applications.map((row) => asApplication(row)) : [],
     invoiceSeq: Number(o.invoiceSeq) || 0,
   };
   if (store.invoiceSeq === 0 && store.invoices.length > 0) store.invoiceSeq = store.invoices.length;
@@ -623,6 +663,125 @@ export async function deleteExpense(id: string) {
   });
 }
 
+function fileExt(name: string, mime: string) {
+  const fromName = name.toLowerCase().match(/\.(pdf|docx?|jpe?g|png)$/)?.[0];
+  if (fromName) return fromName;
+  if (mime === "application/pdf") return ".pdf";
+  if (mime === "application/msword") return ".doc";
+  if (mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") return ".docx";
+  if (mime === "image/jpeg") return ".jpg";
+  if (mime === "image/png") return ".png";
+  return ".bin";
+}
+
+export async function putRepoFile(path: string, bytes: Buffer, message: string) {
+  const encoded = path
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+  const metaRes = await fetch(`https://api.github.com/repos/${STORE_REPO}/contents/${encoded}?ref=${STORE_BRANCH}`, {
+    headers: await ghHeaders(),
+    cache: "no-store",
+  });
+  const meta = metaRes.ok ? ((await metaRes.json()) as { sha?: string }) : null;
+  const res = await githubRequest(
+    `https://api.github.com/repos/${STORE_REPO}/contents/${encoded}`,
+    {
+      method: "PUT",
+      headers: { ...(await ghHeaders()), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message,
+        content: bytes.toString("base64"),
+        branch: STORE_BRANCH,
+        ...(meta?.sha ? { sha: meta.sha } : {}),
+      }),
+    },
+    "SAVE",
+  );
+  await res.json().catch(() => null);
+  return path;
+}
+
+export async function getRepoFile(path: string) {
+  const encoded = path
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+  const res = await githubRequest(
+    `https://api.github.com/repos/${STORE_REPO}/contents/${encoded}?ref=${STORE_BRANCH}`,
+    { headers: await ghHeaders() },
+    "LOAD",
+  );
+  const json = (await res.json()) as { content?: string; encoding?: string; download_url?: string };
+  if (json.content) {
+    return Buffer.from(json.content.replaceAll("\n", ""), "base64");
+  }
+  if (json.download_url) {
+    const file = await fetch(json.download_url, { cache: "no-store" });
+    if (!file.ok) throw new Error(`GH_LOAD_${file.status}`);
+    return Buffer.from(await file.arrayBuffer());
+  }
+  throw new Error("FILE_MISSING");
+}
+
+export async function createApplication(input: {
+  jobId: string;
+  jobTitle: string;
+  name: string;
+  phone: string;
+  email: string;
+  letter: string;
+  cv: { name: string; type: string; bytes: Buffer };
+  letterFile?: { name: string; type: string; bytes: Buffer };
+}) {
+  const id = crypto.randomUUID();
+  const cvExt = fileExt(input.cv.name, input.cv.type);
+  const cvPath = `applications/${id}-cv${cvExt}`;
+  await putRepoFile(cvPath, input.cv.bytes, `Candidature CV ${input.name}`);
+  let letterPath: string | undefined;
+  let letterName: string | undefined;
+  if (input.letterFile) {
+    const letterExt = fileExt(input.letterFile.name, input.letterFile.type);
+    letterPath = `applications/${id}-lettre${letterExt}`;
+    letterName = input.letterFile.name;
+    await putRepoFile(letterPath, input.letterFile.bytes, `Candidature lettre ${input.name}`);
+  }
+  return mutateStore((store) => {
+    if (!store.applications) store.applications = [];
+    const application: Application = {
+      id,
+      createdAt: new Date().toISOString(),
+      jobId: input.jobId,
+      jobTitle: input.jobTitle,
+      name: input.name,
+      phone: input.phone,
+      email: input.email,
+      letter: input.letter,
+      cvName: input.cv.name || `cv${cvExt}`,
+      cvPath,
+      letterName,
+      letterPath,
+      status: "nouvelle",
+    };
+    store.applications.push(application);
+    return application;
+  });
+}
+
+export async function getApplication(id: string) {
+  const store = await loadStore();
+  return (store.applications || []).find((item) => item.id === id) || null;
+}
+
+export async function updateApplicationStatus(id: string, status: ApplicationStatus) {
+  return mutateStore((store) => {
+    const application = (store.applications || []).find((item) => item.id === id);
+    if (!application) return null;
+    application.status = status;
+    return application;
+  });
+}
+
 export async function getSalon() {
   const store = await loadStore();
   return {
@@ -630,5 +789,6 @@ export async function getSalon() {
     invoices: store.invoices.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     payments: store.payments.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     expenses: store.expenses.slice().sort((a, b) => b.dateIso.localeCompare(a.dateIso) || b.createdAt.localeCompare(a.createdAt)),
+    applications: (store.applications || []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
   };
 }

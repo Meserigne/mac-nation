@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/admin/paiements", label: "Paiements" },
   { href: "/admin/caisse", label: "Caisse" },
   { href: "/admin/compta", label: "Compta" },
+  { href: "/admin/candidatures", label: "Candidatures" },
 ];
 
 export default function AdminNav() {
