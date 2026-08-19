@@ -2,16 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CheckoutForm from "@/components/CheckoutForm";
-import { plans } from "@/lib/data";
-import { parseFcfa } from "@/lib/money";
+import { getPublicCatalog } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "Payer un abonnement",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function AbonnementPayerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const plan = plans.find((item) => item.id === id);
+  const catalog = await getPublicCatalog();
+  const plan = catalog.plans.find((item) => item.id === id);
   if (!plan) notFound();
 
   return (
@@ -28,8 +30,8 @@ export default async function AbonnementPayerPage({ params }: { params: Promise<
         kind="abonnement"
         itemId={plan.id}
         title={plan.name}
-        amount={parseFcfa(plan.price)}
-        hint={`${plan.period}. Valable à Nord Foire. Les visites non utilisées ne se reportent pas.`}
+        amount={plan.priceFcfa}
+        hint={`${plan.period}. Valable à ${catalog.site.city}. Les visites non utilisées ne se reportent pas.`}
       />
     </main>
   );

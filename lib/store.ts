@@ -1,4 +1,5 @@
 import { createClient, type RedisClientType } from "redis";
+import { asCatalog, publicCatalog, type Catalog } from "@/lib/catalog";
 import { hashPin, pinOk } from "@/lib/client-auth";
 import { addDays, planPerks, pointsForAmount, REDEEM_FCFA, REDEEM_POINTS } from "@/lib/loyalty";
 import { bookingAmount, bookingLines, invoiceTotal, type ExpenseCategory, type InvoiceLine, type PaymentMethod } from "@/lib/money";
@@ -140,6 +141,7 @@ export type SalonStore = {
   clients: Client[];
   loyalty: LoyaltyEvent[];
   memberships: Membership[];
+  catalog: Catalog;
   invoiceSeq: number;
 };
 
@@ -172,6 +174,7 @@ function emptyStore(bookings: Booking[] = []): SalonStore {
     clients: [],
     loyalty: [],
     memberships: [],
+    catalog: asCatalog(undefined),
     invoiceSeq: 0,
   };
 }
@@ -193,7 +196,7 @@ function asBooking(raw: Partial<Booking>): Booking {
     place,
     address: raw.address || "",
     status: raw.status || "nouveau",
-    amount: typeof raw.amount === "number" ? raw.amount : bookingAmount(serviceId, place),
+    amount: typeof raw.amount === "number" ? raw.amount : 0,
     paymentStatus: raw.paymentStatus || "unpaid",
     invoiceId: raw.invoiceId,
     clientId: raw.clientId,
@@ -272,6 +275,7 @@ function normalizeStore(raw: unknown): SalonStore {
     clients: Array.isArray(o.clients) ? o.clients.map((row) => asClient(row)) : [],
     loyalty: Array.isArray(o.loyalty) ? o.loyalty : [],
     memberships: Array.isArray(o.memberships) ? o.memberships : [],
+    catalog: asCatalog(o.catalog),
     invoiceSeq: Number(o.invoiceSeq) || 0,
   };
   if (store.invoiceSeq === 0 && store.invoices.length > 0) store.invoiceSeq = store.invoices.length;
@@ -501,6 +505,33 @@ function ensureClientCollections(store: SalonStore) {
   if (!store.memberships) store.memberships = [];
 }
 
+function ensureCatalog(store: SalonStore) {
+  store.catalog = asCatalog(store.catalog);
+}
+
+function catalogService(store: SalonStore, serviceId: string) {
+  ensureCatalog(store);
+  return store.catalog.services.find((item) => item.id === serviceId) || null;
+}
+
+function catalogBooking(store: SalonStore, serviceId: string, serviceName: string, place: "salon" | "domicile") {
+  ensureCatalog(store);
+  const service = catalogService(store, serviceId);
+  const base = service?.priceFcfa || 0;
+  const fee = store.catalog.site.domicileFee;
+  return {
+    amount: bookingAmount(base, place, serviceId, fee),
+    items: bookingLines(serviceName || service?.name || "Prestation", base, place, serviceId, fee),
+  };
+}
+
+function catalogPlanPerks(store: SalonStore, planId: string) {
+  ensureCatalog(store);
+  const plan = store.catalog.plans.find((item) => item.id === planId);
+  if (plan) return { visits: plan.visits, boutiquePercent: plan.boutiquePercent, name: plan.name };
+  return planPerks(planId);
+}
+
 function findClient(store: SalonStore, clientId?: string, phone?: string) {
   ensureClientCollections(store);
   if (clientId) {
@@ -533,7 +564,7 @@ function planIdFromInvoice(invoice: Invoice) {
 function activateMembership(store: SalonStore, client: Client, invoice: Invoice) {
   if (store.memberships.some((item) => item.invoiceId === invoice.id)) return;
   const planId = planIdFromInvoice(invoice);
-  const perks = planPerks(planId);
+  const perks = catalogPlanPerks(store, planId);
   const now = new Date().toISOString();
   for (const membership of store.memberships) {
     if (membership.clientId === client.id && membership.status === "actif") membership.status = "expire";
@@ -688,13 +719,13 @@ export function buildWalkInInvoice(input: {
 
 export async function createBooking(input: Omit<Booking, "id" | "createdAt" | "status" | "amount" | "paymentStatus" | "invoiceId">) {
   return mutateStore((store) => {
-    const amount = bookingAmount(input.serviceId, input.place);
+    const priced = catalogBooking(store, input.serviceId, input.serviceName, input.place);
     const booking: Booking = {
       ...input,
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       status: "nouveau",
-      amount,
+      amount: priced.amount,
       paymentStatus: "unpaid",
     };
     const invoice = makeInvoice(store, {
@@ -702,7 +733,7 @@ export async function createBooking(input: Omit<Booking, "id" | "createdAt" | "s
       clientName: booking.name,
       clientPhone: booking.phone,
       clientEmail: booking.email,
-      items: bookingLines(booking.serviceName, booking.serviceId, booking.place),
+      items: priced.items,
       note: `${booking.dateLabel} · ${booking.time} · ${booking.place === "domicile" ? booking.address : "Salon Nord Foire"}`,
       kind: "rdv",
       clientId: booking.clientId,
@@ -745,12 +776,13 @@ export async function invoiceForBooking(bookingId: string) {
     if (!booking) return null;
     const existing = booking.invoiceId ? store.invoices.find((item) => item.id === booking.invoiceId) : store.invoices.find((item) => item.bookingId === booking.id);
     if (existing) return existing;
+    const priced = catalogBooking(store, booking.serviceId, booking.serviceName, booking.place);
     const invoice = makeInvoice(store, {
       bookingId: booking.id,
       clientName: booking.name,
       clientPhone: booking.phone,
       clientEmail: booking.email,
-      items: bookingLines(booking.serviceName, booking.serviceId, booking.place),
+      items: priced.items,
       note: `${booking.dateLabel} · ${booking.time}`,
       kind: "rdv",
       clientId: booking.clientId,
@@ -923,13 +955,14 @@ export async function deleteExpense(id: string) {
 }
 
 function fileExt(name: string, mime: string) {
-  const fromName = name.toLowerCase().match(/\.(pdf|docx?|jpe?g|png)$/)?.[0];
+  const fromName = name.toLowerCase().match(/\.(pdf|docx?|jpe?g|png|webp)$/)?.[0];
   if (fromName) return fromName;
   if (mime === "application/pdf") return ".pdf";
   if (mime === "application/msword") return ".doc";
   if (mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") return ".docx";
   if (mime === "image/jpeg") return ".jpg";
   if (mime === "image/png") return ".png";
+  if (mime === "image/webp") return ".webp";
   return ".bin";
 }
 
@@ -1062,7 +1095,30 @@ export async function getSalon() {
     applications: (store.applications || []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     clients: (store.clients || []).map(publicClient).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     memberships: (store.memberships || []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    catalog: asCatalog(store.catalog),
   };
+}
+
+export async function getPublicCatalog() {
+  try {
+    if (!bookingsConfigured()) return publicCatalog(asCatalog(undefined));
+    const store = await loadStore();
+    return publicCatalog(asCatalog(store.catalog));
+  } catch {
+    return publicCatalog(asCatalog(undefined));
+  }
+}
+
+export async function saveCatalog(input: Catalog) {
+  return mutateStore((store) => {
+    store.catalog = asCatalog(input);
+    return store.catalog;
+  });
+}
+
+export async function getAdminCatalog() {
+  const store = await loadStore();
+  return asCatalog(store.catalog);
 }
 
 export async function registerClient(input: { name: string; phone: string; email: string; pin: string }) {

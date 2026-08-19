@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSessionClientId } from "@/lib/client-auth";
-import { services } from "@/lib/data";
 import { isSnMobile, sendSms, smsConfigured } from "@/lib/sms";
 import { sendBookingEmail, sendWhatsApp } from "@/lib/notify";
 import { bookingsConfigured, createBooking } from "@/lib/bookings";
+import { getPublicCatalog } from "@/lib/store";
 import { startCheckout } from "@/lib/paydunya";
 
 type BookingBody = {
@@ -41,7 +41,8 @@ export async function POST(request: Request) {
   const place = text(payload.place) === "domicile" ? "domicile" : "salon";
   const address = text(payload.address);
   const payNow = payload.payNow === true;
-  const service = services.find((item) => item.id === serviceId);
+  const catalog = await getPublicCatalog();
+  const service = catalog.services.find((item) => item.id === serviceId);
   const owner = process.env.BOOKING_SMS_TO || "";
 
   if (!name || !phone || !service || !dateLabel || !time) {

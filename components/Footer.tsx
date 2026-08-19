@@ -1,6 +1,10 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { salonInfo } from "@/lib/assets";
+import type { SiteSettings } from "@/lib/catalog";
 
 const SALON_LINKS = [
   { href: "/rendez-vous", label: "Réserver" },
@@ -36,6 +40,29 @@ function LegalNav() {
 }
 
 export default function Footer() {
+  const [site, setSite] = useState({
+    address: salonInfo.address,
+    city: salonInfo.city,
+    country: salonInfo.country,
+    hours: salonInfo.hours,
+    phone: "",
+  });
+
+  useEffect(() => {
+    fetch("/api/catalog", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((json: { site?: Partial<SiteSettings> }) => {
+        if (!json.site) return;
+        setSite({
+          address: json.site.address || salonInfo.address,
+          city: json.site.city || salonInfo.city,
+          country: json.site.country || salonInfo.country,
+          hours: json.site.hours || salonInfo.hours,
+          phone: json.site.phone || "",
+        });
+      })
+      .catch(() => undefined);
+  }, []);
   return (
     <footer id="mainFooter" className="w-full bg-gray-950 text-foreground">
       <div className="mx-auto w-full max-w-[120rem] px-6 md:px-10 lg:px-16 xl:px-20">
@@ -47,11 +74,12 @@ export default function Footer() {
           <div className="text-center sm:text-left">
             <p className="text-[18px] font-semibold">Le salon</p>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-gray-400">
-              {salonInfo.address}
+              {site.address}
               <br />
-              {salonInfo.city}, {salonInfo.country}
+              {site.city}, {site.country}
             </p>
-            <p className="mt-2 text-sm text-gray-500">{salonInfo.hours}</p>
+            <p className="mt-2 text-sm text-gray-500">{site.hours}</p>
+            {site.phone ? <p className="mt-2 text-sm text-gray-500">{site.phone}</p> : null}
           </div>
         </div>
         <div className="flex w-full items-center justify-center py-4 lg:py-8">

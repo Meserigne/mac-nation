@@ -3,14 +3,19 @@ import Image from "next/image";
 import Link from "next/link";
 import PageHero from "@/components/PageHero";
 import Reveal from "@/components/Reveal";
-import { plans } from "@/lib/data";
 import { pageImages, people, photos } from "@/lib/assets";
+import { catalogPriceLabel } from "@/lib/catalog";
+import { getPublicCatalog } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "Abonnements",
 };
 
-export default function AbonnementsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function AbonnementsPage() {
+  const catalog = await getPublicCatalog();
+  const plans = catalog.plans;
   return (
     <main>
       <PageHero
@@ -33,7 +38,7 @@ export default function AbonnementsPage() {
                 <div className="mb-3 h-4" />
               )}
               <h2 className="font-bebas text-4xl text-white">{plan.name}</h2>
-              <p className="mt-4 font-bebas text-5xl text-white">{plan.price}</p>
+              <p className="mt-4 font-bebas text-5xl text-white">{catalogPriceLabel(plan.priceFcfa)}</p>
               <p className="text-sm text-gray-500">{plan.period}</p>
               <ul className="mt-8 flex-1 space-y-3 text-sm text-gray-300">
                 {plan.points.map((point) => (

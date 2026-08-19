@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSessionClientId } from "@/lib/client-auth";
-import { plans, products } from "@/lib/data";
-import { parseFcfa } from "@/lib/money";
 import { isSnMobile, sendSms, smsConfigured } from "@/lib/sms";
 import { sendBookingEmail } from "@/lib/notify";
-import { bookingsConfigured, buildWalkInInvoice, createWalkInInvoice } from "@/lib/store";
+import { bookingsConfigured, buildWalkInInvoice, createWalkInInvoice, getPublicCatalog } from "@/lib/store";
 import { createPaydunyaCheckout } from "@/lib/paydunya";
 
 export const maxDuration = 30;
@@ -45,17 +43,19 @@ export async function POST(request: Request) {
   let invoiceKind: "boutique" | "abonnement" = "boutique";
   let note = "";
 
+  const catalog = await getPublicCatalog();
+
   if (kind === "boutique") {
-    const product = products.find((item) => item.id === itemId);
+    const product = catalog.products.find((item) => item.id === itemId);
     if (!product) return NextResponse.json({ error: "Produit introuvable." }, { status: 404 });
     lineName = product.name;
-    unitPrice = parseFcfa(product.price);
-    note = `Boutique · retrait au salon Nord Foire`;
+    unitPrice = product.priceFcfa;
+    note = `Boutique · retrait au salon ${catalog.site.city}`;
   } else if (kind === "abonnement") {
-    const plan = plans.find((item) => item.id === itemId);
+    const plan = catalog.plans.find((item) => item.id === itemId);
     if (!plan) return NextResponse.json({ error: "Abonnement introuvable." }, { status: 404 });
     lineName = `Abonnement ${plan.name} · ${plan.period}`;
-    unitPrice = parseFcfa(plan.price);
+    unitPrice = plan.priceFcfa;
     invoiceKind = "abonnement";
     note = `Abonnement ${plan.name} · 1 mois`;
   } else {

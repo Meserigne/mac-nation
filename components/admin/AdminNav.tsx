@@ -11,6 +11,8 @@ const LINKS = [
   { href: "/admin/compta", label: "Compta" },
   { href: "/admin/candidatures", label: "Candidatures" },
   { href: "/admin/clients", label: "Clients" },
+  { href: "/admin/catalogue", label: "Catalogue" },
+  { href: "/admin/site", label: "Site" },
 ];
 
 export default function AdminNav() {

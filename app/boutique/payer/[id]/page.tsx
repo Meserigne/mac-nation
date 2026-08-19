@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CheckoutForm from "@/components/CheckoutForm";
-import { products } from "@/lib/data";
-import { parseFcfa } from "@/lib/money";
+import CatalogImage from "@/components/CatalogImage";
+import { getPublicCatalog } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "Payer un produit",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function BoutiquePayerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const product = products.find((item) => item.id === id);
+  const catalog = await getPublicCatalog();
+  const product = catalog.products.find((item) => item.id === id);
   if (!product) notFound();
 
   return (
@@ -22,16 +24,16 @@ export default async function BoutiquePayerPage({ params }: { params: Promise<{ 
           ← Boutique
         </Link>
         <div className="relative mt-5 aspect-square overflow-hidden rounded-2xl bg-black">
-          <Image src={product.image} alt={product.name} fill className="object-cover" sizes="480px" />
+          <CatalogImage src={product.image} alt={product.name} className="absolute inset-0" />
         </div>
         <p className="mt-4 text-sm text-gray-400">{product.description}</p>
-        <p className="mt-2 text-sm text-gray-500">Retrait au salon, Nord Foire.</p>
+        <p className="mt-2 text-sm text-gray-500">Retrait au salon, {catalog.site.city}.</p>
       </div>
       <CheckoutForm
         kind="boutique"
         itemId={product.id}
         title={product.name}
-        amount={parseFcfa(product.price)}
+        amount={product.priceFcfa}
         showQty
         hint="Payer maintenant. On prépare le produit, tu le récupères au salon."
       />

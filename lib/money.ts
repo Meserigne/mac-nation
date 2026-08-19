@@ -1,5 +1,3 @@
-import { services } from "@/lib/data";
-
 export const DOMICILE_FEE = 2000;
 
 export type PaymentMethod = "especes" | "wave" | "orange" | "free" | "paydunya" | "autre";
@@ -32,14 +30,8 @@ export function formatFcfa(n: number) {
   return `${new Intl.NumberFormat("fr-FR").format(Math.round(n || 0))} F`;
 }
 
-export function serviceBaseAmount(serviceId: string) {
-  const service = services.find((item) => item.id === serviceId);
-  return service ? parseFcfa(service.price) : 0;
-}
-
-export function bookingAmount(serviceId: string, place: "salon" | "domicile") {
-  const base = serviceBaseAmount(serviceId);
-  if (place === "domicile" && serviceId !== "domicile") return base + DOMICILE_FEE;
+export function bookingAmount(base: number, place: "salon" | "domicile", serviceId: string, domicileFee = DOMICILE_FEE) {
+  if (place === "domicile" && serviceId !== "domicile") return base + domicileFee;
   return base;
 }
 
@@ -49,10 +41,16 @@ export type InvoiceLine = {
   unitPrice: number;
 };
 
-export function bookingLines(serviceName: string, serviceId: string, place: "salon" | "domicile"): InvoiceLine[] {
-  const lines: InvoiceLine[] = [{ name: serviceName, qty: 1, unitPrice: serviceBaseAmount(serviceId) }];
+export function bookingLines(
+  serviceName: string,
+  base: number,
+  place: "salon" | "domicile",
+  serviceId: string,
+  domicileFee = DOMICILE_FEE,
+): InvoiceLine[] {
+  const lines: InvoiceLine[] = [{ name: serviceName, qty: 1, unitPrice: base }];
   if (place === "domicile" && serviceId !== "domicile") {
-    lines.push({ name: "Déplacement domicile", qty: 1, unitPrice: DOMICILE_FEE });
+    lines.push({ name: "Déplacement domicile", qty: 1, unitPrice: domicileFee });
   }
   return lines;
 }

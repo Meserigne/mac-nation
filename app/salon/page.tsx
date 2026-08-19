@@ -3,25 +3,29 @@ import Image from "next/image";
 import Link from "next/link";
 import { MapPin, Clock } from "@phosphor-icons/react/dist/ssr";
 import PageHero from "@/components/PageHero";
-import { salon } from "@/lib/data";
 import { assets, people, photos } from "@/lib/assets";
+import { getPublicCatalog } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "Le salon - Nord Foire, Dakar",
 };
 
-export default function SalonPage() {
+export const dynamic = "force-dynamic";
+
+export default async function SalonPage() {
+  const catalog = await getPublicCatalog();
+  const site = catalog.site;
   return (
     <main>
       <PageHero
-        title="MAC NATION Nord Foire"
-        subtitle="Le premier salon. Le seul, pour le moment. Dakar, en face du service d'hygiène."
+        title={site.name}
+        subtitle={site.tagline || "Le premier salon. Le seul, pour le moment. Dakar, en face du service d'hygiène."}
         image={photos.fullSalonAlt}
       />
 
       <section className="mx-auto max-w-[1100px] px-6 pb-10">
         <div className="relative aspect-[16/8] min-h-[240px] overflow-hidden rounded-2xl">
-          <Image src={assets.salon} alt={salon.name} fill priority className="object-cover" sizes="1100px" />
+          <Image src={assets.salon} alt={site.name} fill priority className="object-cover" sizes="1100px" />
         </div>
       </section>
 
@@ -42,13 +46,13 @@ export default function SalonPage() {
         <aside className="rounded-2xl bg-gray-950 p-6 stroke-gradient [--stroke-opacity:0.2]">
           <p className="flex items-start gap-2 text-sm text-gray-300">
             <MapPin size={18} className="mt-0.5 shrink-0" />
-            {salon.address}
+            {site.address}
             <br />
-            {salon.city}, {salon.country}
+            {site.city}, {site.country}
           </p>
           <p className="mt-4 flex items-start gap-2 text-sm text-gray-400">
             <Clock size={18} className="mt-0.5 shrink-0" />
-            {salon.hours}
+            {site.hours}
           </p>
         </aside>
       </section>

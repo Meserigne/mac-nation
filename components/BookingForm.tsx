@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { CaretLeft, CaretRight, CheckCircle } from "@phosphor-icons/react";
 import { services } from "@/lib/data";
 import { formatFcfa } from "@/lib/money";
+import { catalogPriceLabel, type CatalogService } from "@/lib/catalog";
 import SoftPay from "@/components/SoftPay";
 
 const WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"] as const;
@@ -84,6 +85,18 @@ export default function BookingForm() {
   const [done, setDone] = useState<Confirmation | null>(null);
   const [payNow, setPayNow] = useState(true);
   const [prefill, setPrefill] = useState({ name: "", phone: "", email: "" });
+  const [offer, setOffer] = useState<CatalogService[]>([]);
+  const [domicileFee, setDomicileFee] = useState(2000);
+
+  useEffect(() => {
+    fetch("/api/catalog", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((json: { services?: CatalogService[]; site?: { domicileFee?: number } }) => {
+        if (Array.isArray(json.services) && json.services.length) setOffer(json.services);
+        if (json.site?.domicileFee) setDomicileFee(json.site.domicileFee);
+      })
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     fetch("/api/compte/session", { cache: "no-store" })
@@ -126,7 +139,7 @@ export default function BookingForm() {
     const phone = String(data.get("phone") || "").trim();
     const serviceId = String(data.get("service") || "").trim();
     const address = String(data.get("address") || "").trim();
-    const service = services.find((s) => s.id === serviceId);
+    const service = offer.find((s) => s.id === serviceId) || services.find((s) => s.id === serviceId);
 
     if (!name || !phone || !service || !selected || !time) {
       showMessage("Choisissez un jour, une heure et une prestation, puis indiquez votre nom et votre téléphone.");
@@ -138,11 +151,12 @@ export default function BookingForm() {
     }
 
     const email = String(data.get("email") || "").trim();
+    const priceText = "priceFcfa" in service ? catalogPriceLabel(service.priceFcfa, service.priceLabel) : service.price;
     const confirmation: Confirmation = {
       name,
       phone,
       email,
-      service: `${service.name} · ${service.price}`,
+      service: `${service.name} · ${priceText}`,
       dateLabel: dateLabel(selected),
       time,
       place,
@@ -274,7 +288,7 @@ export default function BookingForm() {
               {(
                 [
                   { id: "salon", label: "Au salon", hint: "Nord Foire" },
-                  { id: "domicile", label: "À domicile", hint: "+ 2 000 F" },
+                  { id: "domicile", label: "À domicile", hint: `+ ${formatFcfa(domicileFee)}` },
                 ] as const
               ).map((opt) => (
                 <button
@@ -305,9 +319,9 @@ export default function BookingForm() {
               <option value="" disabled>
                 Choisir
               </option>
-              {services.map((s) => (
+              {(offer.length ? offer : services).map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name} · {s.price}
+                  {s.name} · {"priceFcfa" in s ? catalogPriceLabel(s.priceFcfa, s.priceLabel) : s.price}
                 </option>
               ))}
             </select>

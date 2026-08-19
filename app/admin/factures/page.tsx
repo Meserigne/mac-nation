@@ -1,11 +1,11 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Invoice } from "@/lib/store";
 import { formatFcfa } from "@/lib/money";
-import { products, services } from "@/lib/data";
+import type { Catalog } from "@/lib/catalog";
 
 const FILTERS = [
   { id: "toutes", label: "Toutes" },
@@ -38,6 +38,7 @@ export default function FacturesPage() {
   const [clientPhone, setClientPhone] = useState("");
   const [lineName, setLineName] = useState("Coupe");
   const [linePrice, setLinePrice] = useState("5000");
+  const [catalogItems, setCatalogItems] = useState<{ name: string; price: string }[]>([]);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/salon", { cache: "no-store" });
@@ -45,25 +46,26 @@ export default function FacturesPage() {
       router.replace("/admin/login");
       return;
     }
-    const json = (await res.json()) as { invoices?: Invoice[]; error?: string };
+    const json = (await res.json()) as { invoices?: Invoice[]; catalog?: Catalog; error?: string };
     if (!res.ok) {
       setError(json.error || "Chargement impossible.");
       return;
     }
     setInvoices(json.invoices || []);
+    const cat = json.catalog;
+    if (cat) {
+      setCatalogItems([
+        ...cat.services.map((item) => ({ name: item.name, price: String(item.priceFcfa) })),
+        ...cat.products.map((item) => ({ name: item.name, price: String(item.priceFcfa) })),
+      ]);
+    }
   }, [router]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const catalog = useMemo(
-    () => [
-      ...services.map((item) => ({ name: item.name, price: item.price.replace(/\D/g, "") || "0" })),
-      ...products.map((item) => ({ name: item.name, price: item.price.replace(/\D/g, "") || "0" })),
-    ],
-    [],
-  );
+  const catalog = catalogItems;
 
   const visible = invoices.filter((item) => (filter === "toutes" ? true : item.status === filter));
 
