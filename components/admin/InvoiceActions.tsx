@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Invoice } from "@/lib/store";
+import PaymentLogos from "@/components/PaymentLogos";
 
 export default function InvoiceActions({ invoice }: { invoice: Invoice }) {
   const router = useRouter();
@@ -67,8 +68,8 @@ export default function InvoiceActions({ invoice }: { invoice: Invoice }) {
       <button type="button" disabled={Boolean(busy)} onClick={() => void pay("wave")} className="h-10 cursor-pointer rounded-lg bg-gray-900 px-3 text-sm text-white ring-1 ring-white/10 disabled:opacity-50">
         Wave
       </button>
-      <button type="button" disabled={Boolean(busy)} onClick={() => void mobile()} className="h-10 cursor-pointer rounded-lg bg-gray-900 px-3 text-sm text-white ring-1 ring-white/10 disabled:opacity-50">
-        Wave / Orange / Free
+      <button type="button" disabled={Boolean(busy)} onClick={() => void mobile()} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-gray-900 px-3 text-sm text-white ring-1 ring-white/10 disabled:opacity-50">
+        <PaymentLogos size="sm" />
       </button>
       {error ? <p className="w-full text-xs text-red-400">{error}</p> : null}
     </div>

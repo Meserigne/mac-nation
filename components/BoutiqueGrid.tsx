@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import Reveal from "@/components/Reveal";
 import CatalogImage from "@/components/CatalogImage";
+import PaymentLogos from "@/components/PaymentLogos";
 import { catalogPriceLabel, type CatalogCategory, type CatalogProduct } from "@/lib/catalog";
 
 export default function BoutiqueGrid({
@@ -61,9 +62,10 @@ export default function BoutiqueGrid({
                 <p className="font-bebas mt-6 text-3xl text-white">{catalogPriceLabel(p.priceFcfa)}</p>
                 <Link
                   href={`/boutique/payer/${p.id}`}
-                  className="btn-gold mt-4 flex h-12 items-center justify-center rounded-lg text-sm font-medium"
+                  className="btn-gold mt-4 flex h-12 items-center justify-center gap-3 rounded-lg text-sm font-medium"
                 >
-                  Payer par Wave / Orange / Free
+                  Payer
+                  <PaymentLogos size="sm" />
                 </Link>
               </div>
             </article>

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { MapPin, Clock } from "@phosphor-icons/react/dist/ssr";
 import PageHero from "@/components/PageHero";
-import { assets, people, photos } from "@/lib/assets";
+import CatalogImage from "@/components/CatalogImage";
+import { galleryOf, photoOf } from "@/lib/site-photos";
 import { getPublicCatalog } from "@/lib/store";
 
 export const metadata: Metadata = {
@@ -15,17 +15,19 @@ export const dynamic = "force-dynamic";
 export default async function SalonPage() {
   const catalog = await getPublicCatalog();
   const site = catalog.site;
+  const photos = catalog.photos;
+  const gallery = galleryOf(photos);
   return (
     <main>
       <PageHero
         title={site.name}
         subtitle={site.tagline || "Le premier salon. Le seul, pour le moment. Dakar, en face du service d'hygiène."}
-        image={photos.fullSalonAlt}
+        image={photoOf(photos, "salonBanner")}
       />
 
       <section className="mx-auto max-w-[1100px] px-6 pb-10">
         <div className="relative aspect-[16/8] min-h-[240px] overflow-hidden rounded-2xl">
-          <Image src={assets.salon} alt={site.name} fill priority className="object-cover" sizes="1100px" />
+          <CatalogImage src={photoOf(photos, "salonMain")} alt={site.name} fill priority />
         </div>
       </section>
 
@@ -60,27 +62,21 @@ export default async function SalonPage() {
       <section className="mx-auto max-w-[1200px] px-6 pb-24">
         <h2 className="font-bebas text-4xl text-white">Le lieu</h2>
         <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3">
-          {assets.gallery.map((src, i) => (
+          {gallery.map((item, i) => (
             <div
-              key={src}
+              key={item.id}
               className={`relative overflow-hidden rounded-xl ${i === 0 || i === 5 ? "md:col-span-2 md:aspect-[16/8]" : "aspect-[4/3]"}`}
             >
-              <Image
-                src={src}
-                alt={`MAC NATION Nord Foire, vue ${i + 1}`}
-                fill
-                className="object-cover"
-                sizes={i === 0 || i === 5 ? "80vw" : "40vw"}
-              />
+              <CatalogImage src={item.src} alt={item.alt} fill />
             </div>
           ))}
         </div>
         <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="relative aspect-[16/10] overflow-hidden rounded-xl">
-            <Image src={people.cut} alt="Coupe en station" fill className="object-cover" sizes="50vw" />
+            <CatalogImage src={photoOf(photos, "cut")} alt="Coupe en station" fill />
           </div>
           <div className="relative aspect-[16/10] overflow-hidden rounded-xl">
-            <Image src={people.boutique} alt="Boutique capillaire" fill className="object-cover" sizes="50vw" />
+            <CatalogImage src={photoOf(photos, "boutiquePeople")} alt="Boutique capillaire" fill />
           </div>
         </div>
       </section>

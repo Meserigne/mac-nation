@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { asSite, type SiteSettings } from "@/lib/catalog";
 
@@ -72,6 +73,13 @@ export default function AdminSitePage() {
       <p className="text-xs tracking-[0.22em] text-[#c4a574]">MAC NATION</p>
       <h1 className="font-bebas mt-2 text-5xl text-white">Le site</h1>
       <p className="mt-2 text-sm text-gray-400">Adresse, horaires, contact et déplacement à domicile.</p>
+      <p className="mt-2 text-sm text-gray-500">
+        Les photos du site se gèrent dans{" "}
+        <Link href="/admin/photos" className="text-[#c4a574] hover:underline">
+          Photos
+        </Link>
+        .
+      </p>
       <form onSubmit={onSubmit} className="mt-8 space-y-5 rounded-2xl bg-gray-950 p-6 ring-1 ring-white/10">
         <label className="block text-sm text-gray-200">
           Nom du salon

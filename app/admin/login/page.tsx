@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
       >
         <p className="text-xs tracking-[0.22em] text-[#c4a574]">MAC NATION</p>
         <h1 className="font-bebas mt-3 text-4xl text-white">Backoffice</h1>
-        <p className="mt-2 text-sm text-gray-500">Nord Foire · agenda, factures, caisse</p>
+        <p className="mt-2 text-sm text-gray-500">Nord Foire · agenda, factures, caisse. Mot de passe équipe ou mot de passe de secours.</p>
         <label className="mt-8 flex flex-col gap-2 text-sm text-gray-200">
           Mot de passe
           <input

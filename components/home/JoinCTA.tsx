@@ -1,4 +1,4 @@
-import Image from "next/image";
+import CatalogImage from "@/components/CatalogImage";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import Reveal from "@/components/Reveal";
@@ -10,11 +10,11 @@ const items = [
   { href: "/abonnements", kicker: "En tant que membre", title: "Prendre un abonnement" },
 ];
 
-export default function JoinCTA() {
+export default function JoinCTA({ image }: { image?: string }) {
   return (
     <section className="relative w-full overflow-hidden px-4 py-20">
       <div className="pointer-events-none absolute inset-0">
-        <Image src={people.waiting} alt="" fill className="object-cover opacity-25" sizes="100vw" />
+        <CatalogImage src={image || people.waiting} alt="" fill className="opacity-25" />
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background/85 to-background" />
       </div>
       <div className="relative z-10">

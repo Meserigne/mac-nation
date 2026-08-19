@@ -25,7 +25,7 @@ export default function RetoursPage() {
       </p>
       <h2>Paiements</h2>
       <p>
-        Wave, Orange Money et Free Money sont encaissés via PayDunya. Un remboursement validé est renvoyé sur le même
+        Wave, Max it et Mixx sont encaissés via PayDunya. Un remboursement validé est renvoyé sur le même
         moyen de paiement, sous 7 à 14 jours ouvrés, selon l&apos;opérateur. Pour une réclamation :{" "}
         <Link href="/contact">Contact</Link> ou au salon, avec le numéro de facture.
       </p>

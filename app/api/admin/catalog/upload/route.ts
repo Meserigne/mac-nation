@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { putRepoFile } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function extOf(name: string, mime: string) {
   const fromName = name.toLowerCase().match(/\.(jpe?g|png|webp)$/)?.[0];
@@ -17,8 +18,8 @@ export async function POST(request: Request) {
   if (!(file instanceof File) || file.size < 20) {
     return NextResponse.json({ error: "Ajoute une image." }, { status: 400 });
   }
-  if (file.size > 1_200_000) {
-    return NextResponse.json({ error: "Image trop lourde (max 1,2 Mo)." }, { status: 400 });
+  if (file.size > 4_000_000) {
+    return NextResponse.json({ error: "Image trop lourde (max 4 Mo)." }, { status: 400 });
   }
   const mime = file.type || "";
   if (!/^image\/(jpeg|png|webp)$/.test(mime) && !/\.(jpe?g|png|webp)$/i.test(file.name)) {

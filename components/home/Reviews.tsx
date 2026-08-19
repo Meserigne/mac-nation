@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import CatalogImage from "@/components/CatalogImage";
 import { assets } from "@/lib/assets";
 import { reviews } from "@/lib/data";
 import Reveal from "@/components/Reveal";
@@ -20,7 +20,7 @@ function Card({ name, text }: { name: string; text: string }) {
   );
 }
 
-export default function Reviews() {
+export default function Reviews({ image }: { image?: string }) {
   const loop = [...reviews, ...reviews];
   const featured = reviews[0];
 
@@ -39,12 +39,11 @@ export default function Reviews() {
         <div className="mt-12 grid grid-cols-1 items-center gap-8 lg:mt-16 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
           <Reveal>
             <div className="relative mx-auto aspect-[3/4] max-h-[520px] w-full max-w-[420px] overflow-hidden rounded-2xl lg:mx-0 lg:max-h-none">
-              <Image
-                src={assets.reviewsCharacter}
+              <CatalogImage
+                src={image || assets.reviewsCharacter}
                 alt="Client MAC NATION au salon de Nord Foire"
                 fill
-                sizes="(max-width:1024px) 90vw, 420px"
-                className="object-cover object-top"
+                className="object-top"
               />
             </div>
           </Reveal>

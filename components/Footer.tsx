@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { salonInfo } from "@/lib/assets";
 import type { SiteSettings } from "@/lib/catalog";
+import { waMeLink } from "@/lib/sms";
 
 const SALON_LINKS = [
   { href: "/rendez-vous", label: "Réserver" },
@@ -46,6 +47,7 @@ export default function Footer() {
     country: salonInfo.country,
     hours: salonInfo.hours,
     phone: "",
+    email: "",
   });
 
   useEffect(() => {
@@ -59,6 +61,7 @@ export default function Footer() {
           country: json.site.country || salonInfo.country,
           hours: json.site.hours || salonInfo.hours,
           phone: json.site.phone || "",
+          email: json.site.email || "",
         });
       })
       .catch(() => undefined);
@@ -79,7 +82,28 @@ export default function Footer() {
               {site.city}, {site.country}
             </p>
             <p className="mt-2 text-sm text-gray-500">{site.hours}</p>
-            {site.phone ? <p className="mt-2 text-sm text-gray-500">{site.phone}</p> : null}
+            {site.phone ? (
+              <p className="mt-2 text-sm text-gray-500">
+                <a href={`tel:${site.phone.replace(/\s/g, "")}`} className="hover:text-white">
+                  {site.phone}
+                </a>
+                {waMeLink(site.phone) ? (
+                  <>
+                    {" · "}
+                    <a href={waMeLink(site.phone)} target="_blank" rel="noreferrer" className="hover:text-white">
+                      WhatsApp
+                    </a>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
+            {site.email ? (
+              <p className="mt-1 text-sm text-gray-500">
+                <a href={`mailto:${site.email}`} className="hover:text-white">
+                  {site.email}
+                </a>
+              </p>
+            ) : null}
           </div>
         </div>
         <div className="flex w-full items-center justify-center py-4 lg:py-8">

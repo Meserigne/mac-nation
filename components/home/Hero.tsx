@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
+import CatalogImage from "@/components/CatalogImage";
 import { assets } from "@/lib/assets";
 
 function ParticleField() {
@@ -63,8 +63,9 @@ function ParticleField() {
   return <canvas ref={canvasRef} className="block h-full w-full" />;
 }
 
-export default function Hero() {
+export default function Hero({ image }: { image?: string }) {
   const reduce = useReducedMotion();
+  const src = image || assets.hero;
 
   return (
     <div className="relative mb-30 flex min-h-[100dvh] w-full flex-col items-center justify-end overflow-hidden pb-10">
@@ -82,13 +83,12 @@ export default function Hero() {
       >
         <div className="mask-radial-harsh absolute top-[28%] z-1 h-[62%] w-[92%] bg-background sm:top-[18%]" />
         <div className="relative z-2 h-[92%] w-full scale-[1.15] sm:h-[90%] sm:w-[92%] md:scale-[1.08]">
-          <Image
-            src={assets.hero}
+          <CatalogImage
+            src={src}
             alt="Barbers et clients au salon MAC NATION, Nord Foire"
             fill
             priority
-            sizes="100vw"
-            className="object-cover object-[50%_38%]"
+            className="object-[50%_38%]"
           />
         </div>
       </motion.div>

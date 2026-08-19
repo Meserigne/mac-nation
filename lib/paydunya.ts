@@ -218,8 +218,8 @@ function orangeQrFromUrl(url: string) {
 
 function operatorMessage(method: SoftPayMethod) {
   if (method === "wave") return "Ouvre Wave pour valider. MAC NATION reste ouvert.";
-  if (method === "orange") return "Ouvre Orange Money pour valider. MAC NATION reste ouvert.";
-  return "Ouvre Free Money et compose #150# si demandé. MAC NATION reste ouvert.";
+  if (method === "orange") return "Ouvre Max it pour valider. MAC NATION reste ouvert.";
+  return "Ouvre Mixx by Free et compose #150# si demandé. MAC NATION reste ouvert.";
 }
 
 async function postSoftPay(path: string, body: Record<string, string>) {
@@ -269,7 +269,7 @@ async function requestOperatorSoftPay(
     const omUrl = json.other_url?.om_url || "";
     const maxitUrl = json.other_url?.maxit_url || "";
     if (!qr && !omUrl && !maxitUrl && !json.url) {
-      throw new Error(json.message || "Orange Money n'a pas renvoyé de QR code.");
+      throw new Error(json.message || "Max it n'a pas renvoyé de QR code.");
     }
     return {
       method,
@@ -277,7 +277,7 @@ async function requestOperatorSoftPay(
       omUrl,
       maxitUrl,
       url: omUrl || json.url,
-      message: json.message || "Scanne le QR avec Orange Money, ou ouvre l’application.",
+      message: json.message || "Scanne le QR avec Max it, ou ouvre l’application.",
     };
   }
 

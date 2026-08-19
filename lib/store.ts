@@ -1,6 +1,6 @@
 import { createClient, type RedisClientType } from "redis";
 import { asCatalog, publicCatalog, type Catalog } from "@/lib/catalog";
-import { hashPin, pinOk } from "@/lib/client-auth";
+import { hashPin, pinOk, secretOk, hashSecret } from "@/lib/client-auth";
 import { addDays, planPerks, pointsForAmount, REDEEM_FCFA, REDEEM_POINTS } from "@/lib/loyalty";
 import { bookingAmount, bookingLines, invoiceTotal, type ExpenseCategory, type InvoiceLine, type PaymentMethod } from "@/lib/money";
 import { normalizePhone } from "@/lib/sms";
@@ -104,6 +104,20 @@ export type Client = {
   googleId?: string;
   appleId?: string;
   facebookId?: string;
+  lastPinResetAt?: string;
+};
+
+export type ContactStatus = "nouveau" | "lu" | "traite";
+
+export type ContactMessage = {
+  id: string;
+  createdAt: string;
+  name: string;
+  email: string;
+  phone: string;
+  subject: string;
+  message: string;
+  status: ContactStatus;
 };
 
 export type LoyaltyEvent = {
@@ -132,6 +146,19 @@ export type Membership = {
   invoiceId?: string;
 };
 
+export type AdminUser = {
+  id: string;
+  createdAt: string;
+  name: string;
+  passwordHash: string;
+};
+
+export type PublicAdmin = {
+  id: string;
+  createdAt: string;
+  name: string;
+};
+
 export type SalonStore = {
   bookings: Booking[];
   invoices: Invoice[];
@@ -141,7 +168,9 @@ export type SalonStore = {
   clients: Client[];
   loyalty: LoyaltyEvent[];
   memberships: Membership[];
+  messages: ContactMessage[];
   catalog: Catalog;
+  admins: AdminUser[];
   invoiceSeq: number;
 };
 
@@ -174,7 +203,9 @@ function emptyStore(bookings: Booking[] = []): SalonStore {
     clients: [],
     loyalty: [],
     memberships: [],
+    messages: [],
     catalog: asCatalog(undefined),
+    admins: [],
     invoiceSeq: 0,
   };
 }
@@ -223,6 +254,19 @@ function asApplication(raw: Partial<Application>): Application {
   };
 }
 
+function asAdmin(raw: Partial<AdminUser>): AdminUser {
+  return {
+    id: raw.id || crypto.randomUUID(),
+    createdAt: raw.createdAt || new Date().toISOString(),
+    name: (raw.name || "Direction").trim() || "Direction",
+    passwordHash: raw.passwordHash || "",
+  };
+}
+
+function publicAdmin(admin: AdminUser): PublicAdmin {
+  return { id: admin.id, createdAt: admin.createdAt, name: admin.name };
+}
+
 function asClient(raw: Partial<Client>): Client {
   return {
     id: raw.id || crypto.randomUUID(),
@@ -236,6 +280,21 @@ function asClient(raw: Partial<Client>): Client {
     googleId: raw.googleId,
     appleId: raw.appleId,
     facebookId: raw.facebookId,
+    lastPinResetAt: raw.lastPinResetAt,
+  };
+}
+
+function asMessage(raw: Partial<ContactMessage>): ContactMessage {
+  const status: ContactStatus = raw.status === "lu" || raw.status === "traite" ? raw.status : "nouveau";
+  return {
+    id: raw.id || crypto.randomUUID(),
+    createdAt: raw.createdAt || new Date().toISOString(),
+    name: raw.name || "",
+    email: raw.email || "",
+    phone: raw.phone || "",
+    subject: raw.subject || "Message",
+    message: raw.message || "",
+    status,
   };
 }
 
@@ -275,7 +334,9 @@ function normalizeStore(raw: unknown): SalonStore {
     clients: Array.isArray(o.clients) ? o.clients.map((row) => asClient(row)) : [],
     loyalty: Array.isArray(o.loyalty) ? o.loyalty : [],
     memberships: Array.isArray(o.memberships) ? o.memberships : [],
+    messages: Array.isArray(o.messages) ? o.messages.map((row) => asMessage(row)) : [],
     catalog: asCatalog(o.catalog),
+    admins: Array.isArray(o.admins) ? o.admins.map((row) => asAdmin(row)).filter((item) => item.passwordHash) : [],
     invoiceSeq: Number(o.invoiceSeq) || 0,
   };
   if (store.invoiceSeq === 0 && store.invoices.length > 0) store.invoiceSeq = store.invoices.length;
@@ -476,6 +537,7 @@ export type OauthProvider = "google" | "apple" | "facebook";
 
 export type PublicClient = Omit<Client, "pinHash" | "googleId" | "appleId" | "facebookId"> & {
   providers: OauthProvider[];
+  hasPin: boolean;
 };
 
 function publicClient(client: Client): PublicClient {
@@ -492,6 +554,7 @@ function publicClient(client: Client): PublicClient {
     points: client.points,
     creditFcfa: client.creditFcfa,
     providers,
+    hasPin: Boolean(client.pinHash),
   };
 }
 
@@ -503,6 +566,8 @@ function ensureClientCollections(store: SalonStore) {
   if (!store.clients) store.clients = [];
   if (!store.loyalty) store.loyalty = [];
   if (!store.memberships) store.memberships = [];
+  if (!store.admins) store.admins = [];
+  if (!store.messages) store.messages = [];
 }
 
 function ensureCatalog(store: SalonStore) {
@@ -1095,6 +1160,7 @@ export async function getSalon() {
     applications: (store.applications || []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     clients: (store.clients || []).map(publicClient).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     memberships: (store.memberships || []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    messages: (store.messages || []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     catalog: asCatalog(store.catalog),
   };
 }
@@ -1280,5 +1346,100 @@ export async function adjustClient(clientId: string, patch: { pointsDelta?: numb
       });
     }
     return publicClient(client);
+  });
+}
+
+export async function resetClientPin(clientId: string, pin: string) {
+  return mutateStore((store) => {
+    const client = findClient(store, clientId);
+    if (!client) return null;
+    client.pinHash = hashPin(pin);
+    client.lastPinResetAt = new Date().toISOString();
+    return publicClient(client);
+  });
+}
+
+export async function peekClientForPinReset(phone: string) {
+  const store = await loadStore();
+  const client = findClient(store, undefined, phone);
+  if (!client) return null;
+  return { id: client.id, phone: client.phone, lastPinResetAt: client.lastPinResetAt || "" };
+}
+
+export async function createContactMessage(input: {
+  name: string;
+  email: string;
+  phone: string;
+  subject: string;
+  message: string;
+}) {
+  return mutateStore((store) => {
+    ensureClientCollections(store);
+    const item: ContactMessage = {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      name: input.name.trim(),
+      email: input.email.trim(),
+      phone: input.phone.trim(),
+      subject: input.subject.trim() || "Message",
+      message: input.message.trim(),
+      status: "nouveau",
+    };
+    store.messages.unshift(item);
+    return item;
+  });
+}
+
+export async function updateContactMessage(id: string, status: ContactStatus) {
+  return mutateStore((store) => {
+    ensureClientCollections(store);
+    const item = store.messages.find((row) => row.id === id);
+    if (!item) return null;
+    item.status = status;
+    return item;
+  });
+}
+
+export async function adminPasswordMatches(password: string) {
+  const store = await loadStore();
+  return (store.admins || []).some((item) => item.passwordHash && secretOk(password, item.passwordHash));
+}
+
+export async function listAdmins() {
+  const store = await loadStore();
+  return (store.admins || []).map(publicAdmin).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export async function createAdmin(name: string, password: string) {
+  return mutateStore((store) => {
+    ensureClientCollections(store);
+    const admin: AdminUser = {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      name: name.trim() || "Équipe",
+      passwordHash: hashSecret(password),
+    };
+    store.admins.push(admin);
+    return publicAdmin(admin);
+  });
+}
+
+export async function updateAdmin(id: string, patch: { name?: string; password?: string }) {
+  return mutateStore((store) => {
+    ensureClientCollections(store);
+    const admin = store.admins.find((item) => item.id === id);
+    if (!admin) return null;
+    if (patch.name !== undefined) admin.name = patch.name.trim() || admin.name;
+    if (patch.password) admin.passwordHash = hashSecret(patch.password);
+    return publicAdmin(admin);
+  });
+}
+
+export async function deleteAdmin(id: string) {
+  return mutateStore((store) => {
+    ensureClientCollections(store);
+    const before = store.admins.length;
+    store.admins = store.admins.filter((item) => item.id !== id);
+    return store.admins.length < before;
   });
 }

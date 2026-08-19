@@ -7,8 +7,9 @@ import SocialLogin from "@/components/SocialLogin";
 
 export default function CompteLoginPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register" | "pin">("login");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [sending, setSending] = useState(false);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -19,8 +20,24 @@ export default function CompteLoginPage() {
     const name = String(data.get("name") || "").trim();
     const email = String(data.get("email") || "").trim();
     setError("");
+    setNotice("");
     setSending(true);
     try {
+      if (mode === "pin") {
+        const res = await fetch("/api/compte/pin-reset", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone }),
+        });
+        const json = (await res.json().catch(() => null)) as { error?: string; message?: string } | null;
+        if (!res.ok) {
+          setError(json?.error || "Envoi impossible.");
+          return;
+        }
+        setNotice(json?.message || "Si ce numéro a un compte, un nouveau PIN part par SMS.");
+        setMode("login");
+        return;
+      }
       const res = await fetch(mode === "register" ? "/api/compte/register" : "/api/compte/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -47,43 +64,51 @@ export default function CompteLoginPage() {
         className="w-full rounded-2xl bg-gray-950 p-8 stroke-gradient [--stroke-opacity:0.2]"
       >
         <p className="text-xs tracking-[0.22em] text-[#c4a574]">MAC NATION</p>
-        <h1 className="font-bebas mt-3 text-5xl text-white">{mode === "login" ? "Connexion" : "Créer un compte"}</h1>
+        <h1 className="font-bebas mt-3 text-5xl text-white">
+          {mode === "login" ? "Connexion" : mode === "register" ? "Créer un compte" : "PIN oublié"}
+        </h1>
         <p className="mt-2 text-sm text-gray-500">
-          Points de fidélité, abonnements, rendez-vous et achats au même endroit.
+          {mode === "pin"
+            ? "Entre ton téléphone. Si le compte existe, un nouveau PIN part par SMS."
+            : "Points de fidélité, abonnements, rendez-vous et achats au même endroit."}
         </p>
-        <SocialLogin onError={setError} onBusy={setSending} />
-        {error ? <p className="mt-3 text-sm text-red-400">{error}</p> : null}
-        <div className="mt-6 flex items-center gap-3">
-          <span className="h-px flex-1 bg-white/10" />
-          <span className="text-[11px] tracking-[0.18em] text-gray-600">OU AVEC TON TÉLÉPHONE</span>
-          <span className="h-px flex-1 bg-white/10" />
-        </div>
-        <div className="mt-6 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setMode("login");
-              setError("");
-            }}
-            className={`h-10 cursor-pointer rounded-lg text-sm ${
-              mode === "login" ? "btn-gold font-medium" : "bg-gray-900 text-gray-300 ring-1 ring-white/10"
-            }`}
-          >
-            J&apos;ai un compte
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode("register");
-              setError("");
-            }}
-            className={`h-10 cursor-pointer rounded-lg text-sm ${
-              mode === "register" ? "btn-gold font-medium" : "bg-gray-900 text-gray-300 ring-1 ring-white/10"
-            }`}
-          >
-            Nouveau
-          </button>
-        </div>
+        {notice ? <p className="mt-3 text-sm text-[#c4a574]">{notice}</p> : null}
+        {mode !== "pin" ? (
+          <>
+            <SocialLogin onError={setError} onBusy={setSending} />
+            <div className="mt-6 flex items-center gap-3">
+              <span className="h-px flex-1 bg-white/10" />
+              <span className="text-[11px] tracking-[0.18em] text-gray-600">OU AVEC TON TÉLÉPHONE</span>
+              <span className="h-px flex-1 bg-white/10" />
+            </div>
+            <div className="mt-6 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("login");
+                  setError("");
+                }}
+                className={`h-10 cursor-pointer rounded-lg text-sm ${
+                  mode === "login" ? "btn-gold font-medium" : "bg-gray-900 text-gray-300 ring-1 ring-white/10"
+                }`}
+              >
+                J&apos;ai un compte
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("register");
+                  setError("");
+                }}
+                className={`h-10 cursor-pointer rounded-lg text-sm ${
+                  mode === "register" ? "btn-gold font-medium" : "bg-gray-900 text-gray-300 ring-1 ring-white/10"
+                }`}
+              >
+                Nouveau
+              </button>
+            </div>
+          </>
+        ) : null}
         {mode === "register" ? (
           <>
             <label className="mt-6 flex flex-col gap-2 text-sm text-gray-200">
@@ -117,6 +142,7 @@ export default function CompteLoginPage() {
             className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 placeholder:text-gray-600 focus:ring-[#c4a574]/50"
           />
         </label>
+        {mode !== "pin" ? (
         <label className="mt-5 flex flex-col gap-2 text-sm text-gray-200">
           Code PIN (4 à 6 chiffres) *
           <input
@@ -130,14 +156,43 @@ export default function CompteLoginPage() {
             className="h-12 rounded-lg bg-gray-900 px-4 text-white outline-none ring-1 ring-white/10 focus:ring-[#c4a574]/50"
           />
         </label>
+        ) : null}
         {error ? <p className="mt-4 text-sm text-red-400">{error}</p> : null}
         <button
           type="submit"
           disabled={sending}
           className="btn-gold mt-6 h-12 w-full cursor-pointer rounded-lg text-sm font-medium disabled:opacity-70"
         >
-          {sending ? "Un instant…" : mode === "login" ? "Entrer" : "Créer mon compte"}
+          {sending ? "Un instant…" : mode === "login" ? "Entrer" : mode === "register" ? "Créer mon compte" : "Envoyer le PIN"}
         </button>
+        {mode === "login" ? (
+          <p className="mt-4 text-center text-sm text-gray-500">
+            <button
+              type="button"
+              onClick={() => {
+                setMode("pin");
+                setError("");
+                setNotice("");
+              }}
+              className="cursor-pointer hover:text-white"
+            >
+              PIN oublié
+            </button>
+          </p>
+        ) : (
+          <p className="mt-4 text-center text-sm text-gray-500">
+            <button
+              type="button"
+              onClick={() => {
+                setMode("login");
+                setError("");
+              }}
+              className="cursor-pointer hover:text-white"
+            >
+              Retour à la connexion
+            </button>
+          </p>
+        )}
         <p className="mt-4 text-center text-xs text-gray-500">
           1 000 F payés = 1 point. 10 points = 1 000 F de crédit salon.
         </p>

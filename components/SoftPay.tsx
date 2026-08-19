@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatFcfa } from "@/lib/money";
+import { MoneyLogo } from "@/components/PaymentLogos";
 
 type SoftPayMethod = "wave" | "orange" | "free";
 type SoftPayResult = {
@@ -26,8 +27,8 @@ type Props = {
 
 const METHODS: { id: SoftPayMethod; label: string; hint: string }[] = [
   { id: "wave", label: "Wave", hint: "Ouvre Wave, tu restes ici" },
-  { id: "orange", label: "Orange Money", hint: "QR ou app Orange / Maxit" },
-  { id: "free", label: "Free Money", hint: "Valide avec #150#" },
+  { id: "orange", label: "Orange", hint: "QR ou app Max it" },
+  { id: "free", label: "Free", hint: "Valide avec #150#" },
 ];
 
 function suggestedMethod(phone: string): SoftPayMethod {
@@ -115,7 +116,7 @@ export default function SoftPay({ invoiceId, amount, name, phone, email, hideAmo
       {!hideAmount ? <p className="font-bebas text-3xl text-white">{formatFcfa(amount)}</p> : null}
       <p className={`text-sm text-gray-400 ${hideAmount ? "" : "mt-1"}`}>Choisis ton moyen. Tu restes sur MAC NATION.</p>
 
-      <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="mt-5 grid grid-cols-3 gap-2">
         {METHODS.map((item) => (
           <button
             key={item.id}
@@ -126,12 +127,15 @@ export default function SoftPay({ invoiceId, amount, name, phone, email, hideAmo
               setWaiting(false);
               setError("");
             }}
-            className={`cursor-pointer rounded-xl px-4 py-3 text-left ${
+            className={`flex cursor-pointer flex-col items-center rounded-xl px-2 py-4 text-center ${
               method === item.id ? "btn-gold" : "bg-gray-900 text-gray-200 ring-1 ring-white/10 hover:bg-gray-800"
             }`}
           >
-            <span className="block text-sm font-medium">{item.label}</span>
-            <span className={`mt-1 block text-xs ${method === item.id ? "text-black/70" : "text-gray-500"}`}>{item.hint}</span>
+            <MoneyLogo method={item.id} className="h-14 w-14 sm:h-16 sm:w-16" />
+            <span className="mt-3 text-sm font-medium">{item.label}</span>
+            <span className={`mt-1 hidden text-[11px] leading-tight sm:block ${method === item.id ? "text-black/70" : "text-gray-500"}`}>
+              {item.hint}
+            </span>
           </button>
         ))}
       </div>
@@ -151,7 +155,7 @@ export default function SoftPay({ invoiceId, amount, name, phone, email, hideAmo
         <div className="mt-5 rounded-xl bg-white p-4 text-center">
           {result.qr ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={result.qr} alt="QR Orange Money" className="mx-auto h-52 w-52" />
+            <img src={result.qr} alt="QR Max it" className="mx-auto h-52 w-52" />
           ) : null}
           <p className="mt-3 text-sm text-gray-800">{result.message}</p>
           <div className="mt-3 flex flex-col gap-2">
@@ -162,7 +166,7 @@ export default function SoftPay({ invoiceId, amount, name, phone, email, hideAmo
             ) : null}
             {result.maxitUrl ? (
               <a href={result.maxitUrl} className="inline-flex h-11 items-center justify-center rounded-lg bg-gray-900 text-sm text-white">
-                Ouvrir Maxit
+                Ouvrir Max it
               </a>
             ) : null}
           </div>

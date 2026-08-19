@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { formatFcfa } from "@/lib/money";
 import SoftPay from "@/components/SoftPay";
+import PaymentLogos from "@/components/PaymentLogos";
 
 type Props = {
   kind: "boutique" | "abonnement";
@@ -131,8 +132,13 @@ export default function CheckoutForm({ kind, itemId, title, amount, showQty, hin
             />
           </label>
           {error ? <p className="mt-4 rounded-lg bg-red-500/15 px-4 py-3 text-sm text-red-300">{error}</p> : null}
-          <button type="submit" disabled={sending} className="btn-gold mt-6 h-12 w-full cursor-pointer rounded-lg text-sm font-medium disabled:opacity-70">
-            {sending ? "Préparation du paiement…" : "Continuer vers Wave / Orange / Free"}
+          <button type="submit" disabled={sending} className="btn-gold mt-6 flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg text-sm font-medium disabled:opacity-70">
+            {sending ? "Préparation du paiement…" : (
+              <>
+                Continuer
+                <PaymentLogos size="sm" />
+              </>
+            )}
           </button>
           <p className="mt-3 text-center text-xs text-gray-500">Tu paies ici, sans quitter MAC NATION. Espèces aussi acceptées au salon.</p>
         </form>

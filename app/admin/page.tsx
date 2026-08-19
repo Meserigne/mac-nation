@@ -168,7 +168,7 @@ export default function AdminPage() {
           <p className="text-xs tracking-[0.22em] text-[#c4a574]">NORD FOIRE</p>
           <h1 className="font-bebas mt-1 text-5xl text-white">Agenda</h1>
         </div>
-        {!paydunyaReady ? <p className="text-xs text-gray-500">PayDunya : clés à ajouter pour Wave / Orange / Free.</p> : null}
+        {!paydunyaReady ? <p className="text-xs text-gray-500">PayDunya : clés à ajouter pour Wave / Max it / Mixx.</p> : null}
       </div>
 
       <div className="mt-8 grid grid-cols-3 gap-3">

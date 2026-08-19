@@ -92,7 +92,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                 {invoice.paidAt ? ` · ${new Date(invoice.paidAt).toLocaleDateString("fr-FR")}` : ""}
               </p>
             ) : (
-              <p className="mt-2 text-right text-sm text-black/50">Wave · Orange Money · Free Money · Espèces</p>
+              <p className="mt-2 text-right text-sm text-black/50">Wave · Max it · Mixx · Espèces</p>
             )}
           </div>
         </div>

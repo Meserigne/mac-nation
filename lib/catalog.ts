@@ -1,5 +1,6 @@
 import { people, salonInfo } from "@/lib/assets";
 import { plans as seedPlans, products as seedProducts, services as seedServices } from "@/lib/data";
+import { asPhotos, defaultPhotos, type SitePhotos } from "@/lib/site-photos";
 
 export type CategoryKind = "produit" | "prestation";
 
@@ -66,6 +67,7 @@ export type Catalog = {
   services: CatalogService[];
   plans: CatalogPlan[];
   site: SiteSettings;
+  photos: SitePhotos;
 };
 
 function digits(label: string) {
@@ -153,7 +155,7 @@ export function defaultCatalog(): Catalog {
     sort: index,
   }));
 
-  return { categories, products, services, plans, site: defaultSite() };
+  return { categories, products, services, plans, site: defaultSite(), photos: defaultPhotos() };
 }
 
 export function catalogPriceLabel(priceFcfa: number, priceLabel?: string) {
@@ -236,13 +238,16 @@ export function asSite(raw: Partial<SiteSettings> | undefined): SiteSettings {
 
 export function asCatalog(raw: Partial<Catalog> | undefined): Catalog {
   const seed = defaultCatalog();
-  if (!raw || (!raw.products && !raw.services && !raw.plans && !raw.categories && !raw.site)) return seed;
+  if (!raw || (!raw.products && !raw.services && !raw.plans && !raw.categories && !raw.site && !raw.photos)) {
+    return seed;
+  }
   return {
     categories: Array.isArray(raw.categories) ? raw.categories.map((item, i) => asCategory(item, i)) : seed.categories,
     products: Array.isArray(raw.products) ? raw.products.map((item, i) => asProduct(item, i)) : seed.products,
     services: Array.isArray(raw.services) ? raw.services.map((item, i) => asService(item, i)) : seed.services,
     plans: Array.isArray(raw.plans) ? raw.plans.map((item, i) => asPlan(item, i)) : seed.plans,
     site: asSite(raw.site),
+    photos: asPhotos(raw.photos),
   };
 }
 
@@ -254,6 +259,7 @@ export function publicCatalog(catalog: Catalog): Catalog {
     services: catalog.services.filter((item) => item.active).slice().sort(sortFn),
     plans: catalog.plans.filter((item) => item.active).slice().sort(sortFn),
     site: catalog.site,
+    photos: asPhotos(catalog.photos),
   };
 }
 

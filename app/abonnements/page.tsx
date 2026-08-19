@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import PageHero from "@/components/PageHero";
+import CatalogImage from "@/components/CatalogImage";
 import Reveal from "@/components/Reveal";
-import { pageImages, people, photos } from "@/lib/assets";
+import PaymentLogos from "@/components/PaymentLogos";
 import { catalogPriceLabel } from "@/lib/catalog";
+import { photoOf } from "@/lib/site-photos";
 import { getPublicCatalog } from "@/lib/store";
 
 export const metadata: Metadata = {
@@ -16,13 +17,14 @@ export const dynamic = "force-dynamic";
 export default async function AbonnementsPage() {
   const catalog = await getPublicCatalog();
   const plans = catalog.plans;
+  const photos = catalog.photos;
   return (
     <main>
       <PageHero
-        kicker="Wave · Orange Money · Free Money"
+        payments
         title="Abonnements"
-        subtitle="Payer en ligne par Wave, Orange Money ou Free Money. Valable uniquement à Nord Foire."
-        image={pageImages.abonnements}
+        subtitle="Payer en ligne par Wave, Max it ou Mixx. Valable uniquement à Nord Foire."
+        image={photoOf(photos, "abonnements")}
       />
       <section className="mx-auto grid max-w-[1100px] grid-cols-1 gap-6 px-6 pb-12 md:grid-cols-3">
         {plans.map((plan, i) => (
@@ -47,9 +49,10 @@ export default async function AbonnementsPage() {
               </ul>
               <Link
                 href={`/abonnements/payer/${plan.id}`}
-                className="btn-gold mt-8 inline-flex h-12 items-center justify-center rounded-lg text-sm font-medium"
+                className="btn-gold mt-8 inline-flex h-12 items-center justify-center gap-3 rounded-lg text-sm font-medium"
               >
-                Payer par Wave / Orange / Free
+                Payer
+                <PaymentLogos size="sm" />
               </Link>
             </article>
           </Reveal>
@@ -58,12 +61,12 @@ export default async function AbonnementsPage() {
       <section className="mx-auto mb-10 max-w-[1100px] px-6">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {[
-            { src: people.waiting, alt: "Clients en attente" },
-            { src: photos.lounge, alt: "Lounge" },
-            { src: people.cut, alt: "Coupe en salon" },
+            { src: photoOf(photos, "waiting"), alt: "Clients en attente" },
+            { src: photoOf(photos, "lounge"), alt: "Lounge" },
+            { src: photoOf(photos, "cut"), alt: "Coupe en salon" },
           ].map((shot) => (
-            <div key={shot.src} className="relative aspect-[16/10] overflow-hidden rounded-xl">
-              <Image src={shot.src} alt={shot.alt} fill className="object-cover" sizes="33vw" />
+            <div key={shot.alt} className="relative aspect-[16/10] overflow-hidden rounded-xl">
+              <CatalogImage src={shot.src} alt={shot.alt} fill />
             </div>
           ))}
         </div>

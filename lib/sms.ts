@@ -49,3 +49,8 @@ export async function sendSms(to: string, body: string) {
     throw new Error("SMS_SEND_FAILED");
   }
 }
+
+export function waMeLink(phone: string) {
+  const digits = normalizePhone(phone).replace(/\D/g, "");
+  return digits ? `https://wa.me/${digits}` : "";
+}

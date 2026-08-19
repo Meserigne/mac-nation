@@ -20,7 +20,7 @@ export default function MentionsLegalesPage() {
       <h2>Objet du site</h2>
       <p>
         Le site présente le salon, permet de réserver une prestation, d&apos;acheter des produits de la boutique, de souscrire un
-        abonnement et de postuler. Les paiements en ligne sont réalisés via PayDunya (Wave, Orange Money, Free Money).
+        abonnement et de postuler. Les paiements en ligne sont réalisés via PayDunya (Wave, Max it, Mixx).
       </p>
       <h2>Hébergement</h2>
       <p>

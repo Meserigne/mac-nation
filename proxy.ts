@@ -11,6 +11,7 @@ const COMPTE_PUBLIC = new Set([
   "/api/compte/logout",
   "/api/compte/oauth",
   "/api/compte/oauth/config",
+  "/api/compte/pin-reset",
 ]);
 
 export function proxy(request: NextRequest) {

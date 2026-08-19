@@ -1,31 +1,31 @@
-import Image from "next/image";
+import CatalogImage from "@/components/CatalogImage";
 import Reveal from "@/components/Reveal";
+import { photoOf, type SitePhotos } from "@/lib/site-photos";
 import { people, photos } from "@/lib/assets";
 
-const mosaic = [
-  {
-    src: people.cut,
-    alt: "Coupe en station chez MAC NATION",
-    className: "col-span-12 min-h-[280px] sm:min-h-[340px] md:col-span-7 md:min-h-[420px]",
-  },
-  {
-    src: photos.stations,
-    alt: "Postes de coupe, marbre et or",
-    className: "col-span-6 min-h-[200px] sm:min-h-[240px] md:col-span-5 md:min-h-[420px]",
-  },
-  {
-    src: people.client,
-    alt: "Client au salon Nord Foire",
-    className: "col-span-6 min-h-[200px] sm:min-h-[240px] md:col-span-4 md:min-h-[320px]",
-  },
-  {
-    src: people.waiting,
-    alt: "Espace d'attente MAC NATION",
-    className: "col-span-12 min-h-[220px] sm:min-h-[260px] md:col-span-8 md:min-h-[320px]",
-  },
-] as const;
-
-export default function AllBlackSalon() {
+export default function AllBlackSalon({ photos: sitePhotos }: { photos?: SitePhotos }) {
+  const mosaic = [
+    {
+      src: photoOf(sitePhotos, "cut") || people.cut,
+      alt: "Coupe en station chez MAC NATION",
+      className: "col-span-12 min-h-[280px] sm:min-h-[340px] md:col-span-7 md:min-h-[420px]",
+    },
+    {
+      src: photoOf(sitePhotos, "stations") || photos.stations,
+      alt: "Postes de coupe, marbre et or",
+      className: "col-span-6 min-h-[200px] sm:min-h-[240px] md:col-span-5 md:min-h-[420px]",
+    },
+    {
+      src: photoOf(sitePhotos, "client") || people.client,
+      alt: "Client au salon Nord Foire",
+      className: "col-span-6 min-h-[200px] sm:min-h-[240px] md:col-span-4 md:min-h-[320px]",
+    },
+    {
+      src: photoOf(sitePhotos, "waiting") || people.waiting,
+      alt: "Espace d'attente MAC NATION",
+      className: "col-span-12 min-h-[220px] sm:min-h-[260px] md:col-span-8 md:min-h-[320px]",
+    },
+  ];
   return (
     <section className="w-full px-4 py-16 sm:px-8 lg:py-24">
       <div className="mx-auto max-w-[1400px]">
@@ -48,13 +48,7 @@ export default function AllBlackSalon() {
           {mosaic.map((shot, i) => (
             <Reveal key={shot.src} delay={i * 0.06} className={`${shot.className} h-full`}>
               <div className="relative h-full w-full overflow-hidden rounded-xl">
-                <Image
-                  src={shot.src}
-                  alt={shot.alt}
-                  fill
-                  sizes="(max-width:768px) 100vw, 60vw"
-                  className="object-cover"
-                />
+                <CatalogImage src={shot.src} alt={shot.alt} fill />
               </div>
             </Reveal>
           ))}
@@ -72,12 +66,11 @@ export default function AllBlackSalon() {
           <Reveal>
             <article>
               <div className="relative mb-5 aspect-[16/10] overflow-hidden rounded-xl">
-                <Image
-                  src={people.barber}
+                <CatalogImage
+                  src={photoOf(sitePhotos, "barber") || people.barber}
                   alt="Barber MAC NATION, tous types de cheveux"
                   fill
-                  sizes="(max-width:1024px) 100vw, 50vw"
-                  className="object-cover object-top"
+                  className="object-top"
                 />
               </div>
               <h4 className="text-xl font-semibold text-white">Tous types de cheveux</h4>
@@ -90,12 +83,10 @@ export default function AllBlackSalon() {
           <Reveal delay={0.08}>
             <article>
               <div className="relative mb-5 aspect-[16/10] overflow-hidden rounded-xl">
-                <Image
-                  src={photos.fullSalon}
+                <CatalogImage
+                  src={photoOf(sitePhotos, "fullSalon") || photos.fullSalon}
                   alt="Plateau MAC NATION, Nord Foire"
                   fill
-                  sizes="(max-width:1024px) 100vw, 50vw"
-                  className="object-cover"
                 />
               </div>
               <h4 className="text-xl font-semibold text-white">Un plateau pensé pour le confort</h4>

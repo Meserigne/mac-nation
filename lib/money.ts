@@ -5,8 +5,8 @@ export type PaymentMethod = "especes" | "wave" | "orange" | "free" | "paydunya" 
 export const PAYMENT_METHODS: { id: PaymentMethod; label: string }[] = [
   { id: "especes", label: "Espèces" },
   { id: "wave", label: "Wave" },
-  { id: "orange", label: "Orange Money" },
-  { id: "free", label: "Free Money" },
+  { id: "orange", label: "Max it" },
+  { id: "free", label: "Mixx" },
   { id: "paydunya", label: "PayDunya" },
   { id: "autre", label: "Autre" },
 ];

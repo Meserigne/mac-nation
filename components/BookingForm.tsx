@@ -6,6 +6,7 @@ import { services } from "@/lib/data";
 import { formatFcfa } from "@/lib/money";
 import { catalogPriceLabel, type CatalogService } from "@/lib/catalog";
 import SoftPay from "@/components/SoftPay";
+import PaymentLogos from "@/components/PaymentLogos";
 
 const WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"] as const;
 const MONTHS = [
@@ -249,8 +250,9 @@ export default function BookingForm() {
                 <SoftPay invoiceId={done.invoiceId} amount={done.amount || 0} name={done.name} phone={done.phone} email={done.email} />
               </div>
             ) : (
-              <a href={`/payer/${done.invoiceId}`} className="btn-gold flex h-12 w-full items-center justify-center rounded-lg text-sm font-medium">
-                Payer maintenant · Wave / Orange / Free
+              <a href={`/payer/${done.invoiceId}`} className="btn-gold flex h-12 w-full items-center justify-center gap-3 rounded-lg text-sm font-medium">
+                Payer maintenant
+                <PaymentLogos size="sm" />
               </a>
             )
           ) : null}
@@ -269,7 +271,9 @@ export default function BookingForm() {
                 className={`cursor-pointer rounded-lg px-4 py-3 text-left text-sm ${payNow ? "bg-black text-white" : "bg-black/10 text-black"}`}
               >
                 Payer maintenant
-                <span className={`mt-1 block text-xs ${payNow ? "text-white/70" : "text-black/60"}`}>Wave · Orange · Free</span>
+                <span className={`mt-1 flex items-center gap-1.5 ${payNow ? "text-white/70" : "text-black/60"}`}>
+                  <PaymentLogos size="sm" className="justify-start" />
+                </span>
               </button>
               <button
                 type="button"

@@ -71,17 +71,6 @@ function AppleMark() {
   );
 }
 
-function GoogleMark() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden>
-      <path fill="#4285F4" d="M23 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.2c-.3 1.4-1.1 2.6-2.3 3.4v2.8h3.7C21.7 18.4 23 15.6 23 12.3z" />
-      <path fill="#34A853" d="M12 24c3.1 0 5.7-1 7.6-2.8l-3.7-2.8c-1 .7-2.4 1.1-3.9 1.1-3 0-5.6-2-6.5-4.8H1.7v2.9C3.6 21.3 7.5 24 12 24z" />
-      <path fill="#FBBC05" d="M5.5 14.7c-.2-.7-.4-1.4-.4-2.2s.1-1.5.4-2.2V7.4H1.7C.9 8.9.5 10.4.5 12.5s.4 3.6 1.2 5.1l3.8-2.9z" />
-      <path fill="#EA4335" d="M12 4.8c1.7 0 3.2.6 4.4 1.7l3.3-3.3C17.7 1.3 15.1.2 12 .2 7.5.2 3.6 2.9 1.7 7.4l3.8 2.9C6.4 6.8 9 4.8 12 4.8z" />
-    </svg>
-  );
-}
-
 function FacebookMark() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden>
@@ -251,40 +240,27 @@ export default function SocialLogin({
     );
   }
 
-  function googleFallback() {
-    if (!config?.google || !window.google) {
-      onError("Connexion Google pas encore activée.");
-      return;
-    }
-    window.google.accounts.id.prompt();
+  function enabled(provider: SocialProvider) {
+    if (!config) return false;
+    return Boolean(config[provider]);
   }
 
-  const others = device.order.filter((item) => item !== device.primary);
+  const visible = device.order.filter(enabled);
+  const primary = visible[0];
+  const others = visible.slice(1);
 
-  function button(provider: SocialProvider, primary: boolean) {
+  function button(provider: SocialProvider, isPrimary: boolean) {
     if (provider === "google") {
       return (
-        <div key="google" className={primary ? "w-full" : ""}>
+        <div key="google" className={isPrimary ? "w-full" : ""}>
           <div
             ref={googleBox}
-            className={`flex w-full justify-center overflow-hidden rounded-lg ${
-              config && !config.google ? "hidden" : primary ? "min-h-12" : "min-h-11"
-            }`}
+            className={`flex w-full justify-center overflow-hidden rounded-lg ${isPrimary ? "min-h-12" : "min-h-11"}`}
           />
-          {config && !config.google ? (
-            <button
-              type="button"
-              onClick={googleFallback}
-              className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg bg-gray-900 text-sm font-medium text-white ring-1 ring-white/10"
-            >
-              <GoogleMark />
-              {primary ? "Continuer avec Google" : "Google"}
-            </button>
-          ) : null}
         </div>
       );
     }
-    const className = primary
+    const className = isPrimary
       ? `flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg text-sm font-medium ${
           provider === "apple" ? "bg-white text-black" : "bg-[#1877F2] text-white"
         }`
@@ -294,17 +270,31 @@ export default function SocialLogin({
     return (
       <button key={provider} type="button" onClick={() => void start(provider)} className={className}>
         {provider === "apple" ? <AppleMark /> : <FacebookMark />}
-        {primary ? (provider === "apple" ? "Continuer avec Apple" : "Continuer avec Facebook") : provider === "apple" ? "Apple" : "Facebook"}
+        {isPrimary
+          ? provider === "apple"
+            ? "Continuer avec Apple"
+            : "Continuer avec Facebook"
+          : provider === "apple"
+            ? "Apple"
+            : "Facebook"}
       </button>
     );
   }
 
+  if (!config || visible.length === 0) return null;
+
   return (
     <div className="mt-6">
       <p className="text-sm text-gray-400">{device.hint}</p>
-      <div className="mt-4">{button(device.primary, true)}</div>
-      <p className="mt-4 text-center text-[11px] tracking-[0.18em] text-gray-600">AUTRES COMPTES</p>
-      <div className="mt-3 grid grid-cols-2 gap-2">{others.map((provider) => button(provider, false))}</div>
+      <div className="mt-4">{button(primary, true)}</div>
+      {others.length ? (
+        <>
+          <p className="mt-4 text-center text-[11px] tracking-[0.18em] text-gray-600">AUTRES COMPTES</p>
+          <div className={`mt-3 grid gap-2 ${others.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+            {others.map((provider) => button(provider, false))}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

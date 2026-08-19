@@ -6,7 +6,7 @@ export default function PaiementAnnulePage() {
       <div className="w-full max-w-md rounded-2xl bg-gray-950 p-8 stroke-gradient [--stroke-opacity:0.2]">
         <p className="text-xs tracking-[0.22em] text-[#c4a574]">MAC NATION</p>
         <h1 className="font-bebas mt-3 text-5xl text-white">Paiement annulé</h1>
-        <p className="mt-3 text-sm text-gray-400">Rien n’a été débité. Tu peux réessayer ou payer au salon en espèces, Wave ou Orange Money.</p>
+        <p className="mt-3 text-sm text-gray-400">Rien n’a été débité. Tu peux réessayer ou payer au salon en espèces, Wave, Max it ou Mixx.</p>
         <Link href="/rendez-vous" className="btn-gold mt-8 inline-flex h-12 items-center justify-center rounded-lg px-6 text-sm font-medium">
           Retour
         </Link>

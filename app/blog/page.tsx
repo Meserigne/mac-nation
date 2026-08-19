@@ -5,11 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import PageHero from "@/components/PageHero";
 import { articles } from "@/lib/data";
-import { pageImages } from "@/lib/assets";
+import { photoOf } from "@/lib/site-photos";
+import { useSitePhotos } from "@/lib/use-site-photos";
 
 const cats = ["Toutes", "Lifestyle", "Guides et Conseils", "Nos actus", "Tendance"] as const;
 
 export default function BlogPage() {
+  const photos = useSitePhotos();
   const [cat, setCat] = useState<(typeof cats)[number]>("Toutes");
   const list = useMemo(
     () => (cat === "Toutes" ? articles : articles.filter((a) => a.category === cat)),
@@ -20,7 +22,7 @@ export default function BlogPage() {
 
   return (
     <main>
-      <PageHero title="Dernières actualités" subtitle="Actus du salon, conseils grooming et coulisses à Dakar." image={pageImages.blog} />
+      <PageHero title="Dernières actualités" subtitle="Actus du salon, conseils grooming et coulisses à Dakar." image={photoOf(photos, "blog")} />
       <section className="mx-auto max-w-[1200px] px-6 pb-24">
         <div className="mb-10 flex flex-wrap justify-center gap-2">
           {cats.map((c) => (

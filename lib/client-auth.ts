@@ -7,22 +7,29 @@ function secret() {
   return process.env.CLIENT_SECRET || process.env.ADMIN_SECRET || process.env.ADMIN_PASSWORD || "mac-nation-client";
 }
 
-export function hashPin(pin: string) {
+export function hashSecret(value: string) {
   const salt = randomBytes(16).toString("hex");
-  const hash = pbkdf2Sync(pin, salt, 12000, 32, "sha256").toString("hex");
+  const hash = pbkdf2Sync(value, salt, 12000, 32, "sha256").toString("hex");
   return `${salt}:${hash}`;
 }
 
-export function pinOk(pin: string, stored: string) {
+export function secretOk(value: string, stored: string) {
   const [salt, hash] = stored.split(":");
   if (!salt || !hash) return false;
-  const check = pbkdf2Sync(pin, salt, 12000, 32, "sha256").toString("hex");
+  const check = pbkdf2Sync(value, salt, 12000, 32, "sha256").toString("hex");
   if (check.length !== hash.length) return false;
   return timingSafeEqual(Buffer.from(check), Buffer.from(hash));
 }
 
+export const hashPin = hashSecret;
+export const pinOk = secretOk;
+
 export function isPin(value: string) {
   return /^\d{4,6}$/.test(value);
+}
+
+export function isAdminPassword(value: string) {
+  return value.length >= 8 && value.length <= 72;
 }
 
 export function signClient(clientId: string) {

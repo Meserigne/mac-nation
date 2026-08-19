@@ -10,8 +10,11 @@ const LINKS = [
   { href: "/admin/caisse", label: "Caisse" },
   { href: "/admin/compta", label: "Compta" },
   { href: "/admin/candidatures", label: "Candidatures" },
+  { href: "/admin/messages", label: "Messages" },
   { href: "/admin/clients", label: "Clients" },
+  { href: "/admin/acces", label: "Accès" },
   { href: "/admin/catalogue", label: "Catalogue" },
+  { href: "/admin/photos", label: "Photos" },
   { href: "/admin/site", label: "Site" },
 ];
 

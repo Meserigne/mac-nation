@@ -4,7 +4,7 @@ import PageHero from "@/components/PageHero";
 import Reveal from "@/components/Reveal";
 import CatalogImage from "@/components/CatalogImage";
 import { catalogPriceLabel } from "@/lib/catalog";
-import { pageImages } from "@/lib/assets";
+import { photoOf } from "@/lib/site-photos";
 import { getPublicCatalog } from "@/lib/store";
 
 export const metadata: Metadata = {
@@ -21,7 +21,7 @@ export default async function ServicesPage() {
       <PageHero
         title="Catalogue - Coupe, Barbe, Enfants"
         subtitle="Prestations au salon de Nord Foire, ou à domicile. Hommes, ados et enfants. Tarifs en francs CFA."
-        image={pageImages.services}
+        image={photoOf(catalog.photos, "services")}
       />
       <section className="mx-auto grid max-w-[1100px] grid-cols-1 gap-5 px-6 pb-28 md:grid-cols-2">
         {catalog.services.map((s, i) => (

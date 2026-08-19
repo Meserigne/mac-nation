@@ -5,11 +5,13 @@ import PageHero from "@/components/PageHero";
 import Reveal from "@/components/Reveal";
 import ApplyForm from "@/components/ApplyForm";
 import { jobs } from "@/lib/data";
-import { pageImages } from "@/lib/assets";
+import { photoOf } from "@/lib/site-photos";
+import { useSitePhotos } from "@/lib/use-site-photos";
 
 const tracks = ["Barber", "Accueil"] as const;
 
 export default function CareerPage() {
+  const photos = useSitePhotos();
   const [track, setTrack] = useState<(typeof tracks)[number]>("Barber");
   const [applyId, setApplyId] = useState("");
   const list = jobs.filter((j) => j.track === track);
@@ -19,7 +21,7 @@ export default function CareerPage() {
       <PageHero
         title="Écrivez l'histoire avec nous"
         subtitle="Rejoignez MAC NATION à Nord Foire. Un salon, une équipe, un standard."
-        image={pageImages.career}
+        image={photoOf(photos, "career")}
       />
       <section className="mx-auto max-w-[1000px] px-6 pb-24">
         <div className="mb-10 flex justify-center gap-2">

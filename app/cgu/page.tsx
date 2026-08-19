@@ -29,8 +29,7 @@ export default function CguPage() {
       </p>
       <h2>Paiement en ligne</h2>
       <p>
-        Le paiement Mobile Money est opéré par PayDunya. MAC NATION ne stocke pas tes codes secrets Wave, Orange Money ou
-        Free Money.
+        Le paiement Mobile Money est opéré par PayDunya. MAC NATION ne stocke pas tes codes secrets Wave, Max it ou Mixx.
       </p>
       <h2>Données</h2>
       <p>

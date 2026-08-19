@@ -1,15 +1,23 @@
-import Image from "next/image";
+import CatalogImage from "@/components/CatalogImage";
 import Link from "next/link";
 import Reveal from "@/components/Reveal";
 import PlusChip from "@/components/PlusChip";
 import { people, photos } from "@/lib/assets";
 
-export default function BrandExperience() {
+export default function BrandExperience({
+  reception,
+  team,
+}: {
+  reception?: string;
+  team?: string;
+}) {
+  const receptionSrc = reception || photos.reception;
+  const teamSrc = team || people.reception;
   return (
     <section className="relative w-full p-4 py-20 sm:p-8 lg:p-12">
       <div className="bb-container relative overflow-hidden rounded-2xl bg-background p-4 backdrop-blur-sm stroke-gradient [--stroke-opacity:0.2] sm:p-8 lg:p-14">
         <div className="absolute inset-0 overflow-hidden rounded-2xl">
-          <Image src={photos.reception} alt="" fill className="object-cover opacity-25 blur-2xl" sizes="100vw" />
+          <CatalogImage src={receptionSrc} alt="" fill className="opacity-25 blur-2xl" />
         </div>
         <div className="relative z-10 flex flex-col items-center justify-center">
           <Reveal className="mb-10 flex flex-col items-center justify-center gap-y-5 text-center">
@@ -23,22 +31,10 @@ export default function BrandExperience() {
           </Reveal>
           <Reveal className="grid w-full max-w-5xl grid-cols-1 gap-3 md:grid-cols-2">
             <div className="relative aspect-[4/3] overflow-hidden rounded-lg stroke-gradient [--stroke-opacity:0.2]">
-              <Image
-                src={photos.reception}
-                alt="L'accueil MAC NATION"
-                fill
-                className="object-cover"
-                sizes="(max-width:1024px) 100vw, 512px"
-              />
+              <CatalogImage src={receptionSrc} alt="L'accueil MAC NATION" fill />
             </div>
             <div className="relative aspect-[4/3] overflow-hidden rounded-lg stroke-gradient [--stroke-opacity:0.2]">
-              <Image
-                src={people.reception}
-                alt="L'équipe à l'accueil"
-                fill
-                className="object-cover"
-                sizes="(max-width:1024px) 100vw, 512px"
-              />
+              <CatalogImage src={teamSrc} alt="L'équipe à l'accueil" fill />
             </div>
           </Reveal>
           <div className="mx-auto my-10 max-w-180">

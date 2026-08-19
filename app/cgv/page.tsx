@@ -20,7 +20,7 @@ export default function CgvPage() {
       <h2>Commande et réservation</h2>
       <p>
         Une commande boutique ou un abonnement est ferme après paiement. Un rendez-vous est enregistré dès la
-        confirmation. Tu peux payer en ligne (Wave, Orange Money, Free Money via PayDunya) ou au salon (espèces ou
+        confirmation. Tu peux payer en ligne (Wave, Max it, Mixx via PayDunya) ou au salon (espèces ou
         Mobile Money).
       </p>
       <h2>Exécution</h2>

@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   const email = typeof body?.email === "string" ? body.email : "";
 
   if (!invoiceId) return NextResponse.json({ error: "Facture manquante." }, { status: 400 });
-  if (!method) return NextResponse.json({ error: "Choisis Wave, Orange Money ou Free." }, { status: 400 });
+  if (!method) return NextResponse.json({ error: "Choisis Wave, Max it ou Mixx." }, { status: 400 });
 
   try {
     const result = await startSoftPay({ invoiceId, method, phone, name, email });
